@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoproGest — Incidents</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+:root{--navy:#0a0f1e;--card:#141d30;--card2:#1a2540;--border:rgba(99,130,255,.15);--accent:#5b7fff;--accent2:#7c5cfc;--accent3:#38d9a9;--text:#e8eaf6;--muted:#8892b0;--danger:#ff6b6b;--gold:#ffd166;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text);min-height:100vh;}
+/* ── SIDEBAR ── */
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:240px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:1.5rem 0;z-index:50;}
+.sidebar-logo{display:flex;align-items:center;gap:.7rem;padding:0 1.5rem 1.5rem;border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-weight:800;font-size:1.15rem;text-decoration:none;color:var(--text);}
+.sidebar-logo-icon{width:36px;height:36px;border-radius:10px;flex-shrink:0;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:1.1rem;}
+.nav-section-label{font-size:.68rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:.8rem 1.5rem .4rem;margin-top:.5rem;}
+.nav-item{display:flex;align-items:center;gap:.75rem;padding:.7rem 1.5rem;color:var(--muted);font-size:.88rem;transition:all .2s;border-left:2px solid transparent;text-decoration:none;}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.03);}
+.nav-item.active{color:var(--text);background:rgba(91,127,255,.1);border-left-color:var(--accent);}
+.nav-icon{font-size:1.1rem;width:20px;text-align:center;}
+.sidebar-footer{margin-top:auto;padding:1.5rem;border-top:1px solid var(--border);}
+.user-info{display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem;}
+.user-avatar{width:36px;height:36px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:700;}
+.user-details strong{display:block;font-size:.85rem;font-weight:600;}
+.user-details small{color:var(--muted);font-size:.72rem;}
+.btn-logout{width:100%;padding:.6rem;border-radius:8px;border:1px solid rgba(255,107,107,.3);background:rgba(255,107,107,.08);color:#ff9999;font-family:'DM Sans',sans-serif;font-size:.83rem;cursor:pointer;transition:background .2s;display:flex;align-items:center;justify-content:center;gap:.5rem;}
+.btn-logout:hover{background:rgba(255,107,107,.15);}
+/* ── MAIN ── */
+.main{margin-left:240px;padding:2rem 2.5rem;}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem;}
+.page-header h1{font-family:'Syne',sans-serif;font-weight:800;font-size:1.6rem;}
+.page-header p{color:var(--muted);font-size:.92rem;margin-top:.3rem;}
+/* ── STATS ── */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:2rem;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.2rem;transition:transform .2s;}
+.stat-card:hover{transform:translateY(-2px);}
+.stat-val{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;}
+.stat-lbl{color:var(--muted);font-size:.78rem;margin-top:.2rem;}
+/* ── TOOLBAR ── */
+.toolbar{display:flex;gap:.75rem;margin-bottom:1.5rem;flex-wrap:wrap;align-items:center;}
+.search-wrap{position:relative;flex:1;min-width:200px;}
+.search-icon{position:absolute;left:.9rem;top:50%;transform:translateY(-50%);font-size:.95rem;pointer-events:none;}
+.search-input{width:100%;padding:.7rem 1rem .7rem 2.5rem;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.88rem;transition:border-color .2s;}
+.search-input:focus{outline:none;border-color:var(--accent);}
+.search-input::placeholder{color:var(--muted);}
+.filter-btn{padding:.5rem 1rem;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.82rem;cursor:pointer;transition:all .2s;}
+.filter-btn:hover{border-color:rgba(91,127,255,.4);color:var(--text);}
+.filter-btn.active{border-color:var(--accent);background:rgba(91,127,255,.12);color:var(--accent);}
+/* ── INCIDENT CARDS ── */
+.incidents-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1.25rem;}
+.incident-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.4rem;transition:transform .2s,border-color .2s;animation:fadeUp .35s ease both;cursor:pointer;}
+.incident-card:hover{transform:translateY(-3px);border-color:rgba(91,127,255,.3);}
+.incident-header{display:flex;justify-content:space-between;align-items:flex-start;gap:.75rem;margin-bottom:.75rem;}
+.incident-title{font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;line-height:1.4;}
+.incident-desc{color:var(--muted);font-size:.83rem;line-height:1.6;margin-bottom:1rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.incident-meta{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem;}
+.meta-tag{display:inline-flex;align-items:center;gap:.3rem;padding:.22rem .6rem;border-radius:6px;font-size:.72rem;font-weight:600;}
+.tag-normale{background:rgba(91,127,255,.12);color:var(--accent);}
+.tag-haute{background:rgba(255,209,102,.12);color:var(--gold);}
+.tag-urgente{background:rgba(255,107,107,.12);color:var(--danger);}
+.tag-signale{background:rgba(6,182,212,.12);color:#06b6d4;}
+.tag-assigne{background:rgba(139,92,246,.12);color:#8b5cf6;}
+.tag-en_cours{background:rgba(255,209,102,.12);color:var(--gold);}
+.tag-termine,.tag-resolu{background:rgba(56,217,169,.12);color:var(--accent3);}
+.tag-archive{background:rgba(136,146,176,.12);color:var(--muted);}
+.incident-footer{display:flex;justify-content:space-between;align-items:center;padding-top:.9rem;border-top:1px solid var(--border);}
+.incident-date{font-size:.76rem;color:var(--muted);}
+.incident-prest{font-size:.76rem;color:var(--muted);}
+.btn-action{padding:.4rem .9rem;border-radius:7px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.78rem;font-weight:500;cursor:pointer;transition:all .2s;}
+.btn-action:hover{border-color:var(--accent);color:var(--accent);}
+/* ── BTN CREATE ── */
+.btn-create{display:flex;align-items:center;gap:.6rem;padding:.75rem 1.4rem;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-family:'DM Sans',sans-serif;font-weight:600;font-size:.92rem;cursor:pointer;transition:opacity .2s,transform .15s;box-shadow:0 4px 16px rgba(91,127,255,.35);}
+.btn-create:hover{opacity:.9;transform:translateY(-1px);}
+/* ── EMPTY ── */
+.empty-state{text-align:center;padding:4rem 2rem;color:var(--muted);}
+.empty-icon{font-size:3rem;margin-bottom:1rem;opacity:.4;}
+.empty-state h3{font-family:'Syne',sans-serif;font-size:1.1rem;color:var(--text);margin-bottom:.5rem;}
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;padding:1rem;}
+.modal-overlay.show{opacity:1;pointer-events:all;}
+.modal-box{background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:2rem;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;transform:translateY(20px);transition:transform .25s;}
+.modal-overlay.show .modal-box{transform:translateY(0);}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;}
+.modal-header h2{font-family:'Syne',sans-serif;font-weight:800;font-size:1.15rem;}
+.modal-close{background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;}
+.modal-close:hover{color:var(--text);}
+.form-group{display:flex;flex-direction:column;gap:.4rem;margin-bottom:1rem;}
+.form-label{font-size:.75rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);}
+.form-input,.form-textarea,.form-select{width:100%;padding:.8rem 1rem;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.9rem;transition:border-color .2s;}
+.form-input:focus,.form-textarea:focus,.form-select:focus{outline:none;border-color:var(--accent);}
+.form-input::placeholder,.form-textarea::placeholder{color:var(--muted);}
+.form-textarea{resize:vertical;min-height:90px;}
+.form-select option{background:var(--card2);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.ferr{color:var(--danger);font-size:.74rem;display:none;}
+.ferr.show{display:block;}
+.btn-submit{width:100%;padding:.88rem;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-family:'DM Sans',sans-serif;font-weight:600;font-size:1rem;cursor:pointer;margin-top:.5rem;transition:opacity .2s;}
+.btn-submit:hover{opacity:.9;}
+.btn-submit:disabled{opacity:.5;cursor:not-allowed;}
+/* ── DETAIL MODAL ── */
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:.65rem .9rem;background:var(--card);border-radius:8px;margin-bottom:.5rem;}
+.info-label{font-size:.82rem;color:var(--muted);}
+.info-value{font-size:.84rem;font-weight:500;}
+.suivi-item{background:var(--card);border-radius:8px;padding:.85rem 1rem;margin-bottom:.6rem;border-left:3px solid var(--accent);}
+.suivi-meta{display:flex;justify-content:space-between;margin-bottom:.35rem;}
+.suivi-author{font-size:.78rem;font-weight:600;color:var(--accent);}
+.suivi-date{font-size:.74rem;color:var(--muted);}
+.suivi-note{font-size:.83rem;color:var(--muted);}
+.btn-secondary{padding:.6rem 1.2rem;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.85rem;cursor:pointer;transition:all .2s;}
+.btn-secondary:hover{background:rgba(255,255,255,.05);}
+.btn-success{padding:.6rem 1.2rem;border-radius:8px;border:1px solid rgba(56,217,169,.3);background:rgba(56,217,169,.1);color:var(--accent3);font-family:'DM Sans',sans-serif;font-size:.85rem;cursor:pointer;transition:all .2s;}
+.btn-success:hover{background:rgba(56,217,169,.15);}
+.btn-info{padding:.6rem 1.2rem;border-radius:8px;border:1px solid rgba(91,127,255,.3);background:rgba(91,127,255,.1);color:var(--accent);font-family:'DM Sans',sans-serif;font-size:.85rem;cursor:pointer;transition:all .2s;}
+.btn-info:hover{background:rgba(91,127,255,.15);}
+.section-label{font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;margin:1rem 0 .6rem;}
+.divider{height:1px;background:var(--border);margin:1rem 0;}
+/* ── LOADING ── */
+.loading-screen{position:fixed;inset:0;background:var(--navy);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:1rem;}
+.loading-spinner{width:44px;height:44px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+.loading-text{color:var(--muted);font-size:.9rem;}
+/* ── TOAST ── */
+.toast{position:fixed;bottom:2rem;right:2rem;z-index:1000;background:var(--card2);border:1px solid var(--border);border-left:4px solid var(--accent3);border-radius:12px;padding:1rem 1.4rem;font-size:.88rem;color:var(--text);box-shadow:0 10px 40px rgba(0,0,0,.4);transform:translateX(120%);transition:transform .35s cubic-bezier(.22,1,.36,1);max-width:320px;}
+.toast.show{transform:translateX(0);}
+.toast.error{border-left-color:var(--danger);}
+@media(max-width:900px){.sidebar{display:none;}.main{margin-left:0;padding:1.5rem;}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+@keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<div class="loading-screen" id="ls"><div class="loading-spinner"></div><div class="loading-text">Chargement...</div></div>
+
+<aside class="sidebar" id="sidebar" style="display:none"></aside>
+
+<main class="main" id="mainContent" style="display:none">
+  <div class="page-header">
+    <div>
+      <h1>🔧 Incidents & Signalements</h1>
+      <p id="pageSubtitle">Suivez et gérez les incidents de la copropriété</p>
+    </div>
+    <button class="btn-create" onclick="openCreateModal()">+ Signaler un incident</button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-card"><div class="stat-val" id="stTotal">0</div><div class="stat-lbl">Total incidents</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--gold)" id="stEnCours">0</div><div class="stat-lbl">En cours</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--accent3)" id="stResolu">0</div><div class="stat-lbl">Résolus</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--danger)" id="stUrgent">0</div><div class="stat-lbl">Urgents</div></div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="search-input" id="searchInput" placeholder="Rechercher un incident..." oninput="renderIncidents()">
+    </div>
+    <button class="filter-btn active" onclick="setFilter('all',this)">Tous</button>
+    <button class="filter-btn" onclick="setFilter('signale',this)">Signalés</button>
+    <button class="filter-btn" onclick="setFilter('en_cours',this)">En cours</button>
+    <button class="filter-btn" onclick="setFilter('resolu',this)">Résolus</button>
+    <button class="filter-btn" onclick="setFilter('urgente',this)">🚨 Urgents</button>
+  </div>
+
+  <div class="incidents-grid" id="incidentsGrid"></div>
+</main>
+
+<!-- MODAL CRÉER INCIDENT -->
+<div class="modal-overlay" id="createModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>🔧 Signaler un incident</h2>
+      <button class="modal-close" onclick="closeModal('createModal')">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Titre *</label>
+      <input type="text" class="form-input" id="i-titre" placeholder="Ex : Fuite d'eau salle de bain">
+      <span class="ferr" id="e-titre">Champ requis</span>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Priorité *</label>
+        <select class="form-select" id="i-priorite">
+          <option value="normale">🟢 Normale</option>
+          <option value="haute">🟡 Haute</option>
+          <option value="urgente">🔴 Urgente</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Lot concerné</label>
+        <input type="text" class="form-input" id="i-lot" placeholder="Ex : Appt 3B">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description *</label>
+      <textarea class="form-textarea" id="i-desc" placeholder="Décrivez le problème en détail..."></textarea>
+      <span class="ferr" id="e-desc">Champ requis</span>
+    </div>
+    <button class="btn-submit" id="btnCreate" onclick="createIncident()">✅ Signaler l'incident</button>
+  </div>
+</div>
+
+<!-- MODAL DÉTAIL INCIDENT -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal-box" style="max-width:620px">
+    <div class="modal-header">
+      <h2 id="detailTitle">Détail de l'incident</h2>
+      <button class="modal-close" onclick="closeModal('detailModal')">✕</button>
+    </div>
+    <div id="detailBody"></div>
+  </div>
+</div>
+
+<!-- MODAL ASSIGNER -->
+<div class="modal-overlay" id="assignModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>👷 Assigner à un prestataire</h2>
+      <button class="modal-close" onclick="closeModal('assignModal')">✕</button>
+    </div>
+    <input type="hidden" id="assign-id">
+    <div class="form-group">
+      <label class="form-label">Prestataire *</label>
+      <select class="form-select" id="a-prest">
+        <option value="">Sélectionner...</option>
+        <option>Plomberie Express</option>
+        <option>Chauffage Pro</option>
+        <option>Toiture Expert</option>
+        <option>Ascenseur Services</option>
+        <option>Elec Solutions</option>
+        <option>Multi-Services</option>
+        <option>Serrurerie Pro</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Instructions</label>
+      <textarea class="form-textarea" id="a-inst" placeholder="Instructions pour le prestataire..."></textarea>
+    </div>
+    <button class="btn-submit" onclick="doAssign()">✅ Confirmer l'assignation</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="sidebar.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+let currentUser = null;
+let currentProfile = 'locataire';
+let currentUserName = '';
+let allIncidents = [];
+let currentFilter = 'all';
+
+const PRESTATAIRES = ['Plomberie Express','Chauffage Pro','Toiture Expert','Ascenseur Services','Elec Solutions','Multi-Services','Serrurerie Pro'];
+
+auth.onAuthStateChanged(async user => {
+  if (!user) { window.location.href = 'login.html'; return; }
+  currentUser = user;
+  try {
+    const snap = await db.collection('users').doc(user.uid).get();
+    if (snap.exists) {
+      const d = snap.data();
+      currentProfile = d.profile || 'locataire';
+      currentUserName = d.prenom ? `${d.prenom} ${d.nom||''}`.trim() : user.displayName || user.email.split('@')[0];
+      buildSidebar(currentProfile||d.profile||'locataire', name, user.email, 'incidents.html');
+    }
+  } catch(e) {}
+
+  if (['syndic','conseil'].includes(currentProfile)) {  }
+
+  document.getElementById('ls').style.display = 'none';
+  document.getElementById('sidebar').style.display = 'flex';
+  document.getElementById('mainContent').style.display = 'block';
+  loadIncidents();
+});
+
+function loadIncidents() {
+  let query = db.collection('incidents').orderBy('createdAt','desc');
+  query.onSnapshot(snap => {
+    allIncidents = [];
+    snap.forEach(doc => allIncidents.push({ id: doc.id, ...doc.data() }));
+    // Locataire voit seulement ses incidents
+    if (currentProfile === 'locataire') {
+      allIncidents = allIncidents.filter(i => i.createdBy === currentUser.uid);
+    }
+    updateStats();
+    renderIncidents();
+  });
+}
+
+function updateStats() {
+  document.getElementById('stTotal').textContent   = allIncidents.length;
+  document.getElementById('stEnCours').textContent = allIncidents.filter(i => i.statut === 'en_cours').length;
+  document.getElementById('stResolu').textContent  = allIncidents.filter(i => ['resolu','termine'].includes(i.statut)).length;
+  document.getElementById('stUrgent').textContent  = allIncidents.filter(i => i.priorite === 'urgente').length;
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderIncidents();
+}
+
+function renderIncidents() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  let list = allIncidents;
+  if (currentFilter === 'urgente') list = list.filter(i => i.priorite === 'urgente');
+  else if (currentFilter !== 'all') list = list.filter(i => i.statut === currentFilter);
+  if (q) list = list.filter(i =>
+    (i.titre||'').toLowerCase().includes(q) ||
+    (i.description||'').toLowerCase().includes(q)
+  );
+
+  const grid = document.getElementById('incidentsGrid');
+  if (list.length === 0) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🔧</div><h3>Aucun incident trouvé</h3><p>Aucun incident ne correspond à votre recherche.</p></div>`;
+    return;
+  }
+
+  const prioLabels = { normale:'🟢 Normale', haute:'🟡 Haute', urgente:'🔴 Urgente' };
+  const statLabels = { signale:'Signalé', assigne:'Assigné', en_cours:'En cours', termine:'Terminé', resolu:'Résolu', archive:'Archivé' };
+
+  grid.innerHTML = list.map((inc, i) => {
+    const date = inc.createdAt?.toDate ? inc.createdAt.toDate().toLocaleDateString('fr-FR') : '—';
+    const canManage = ['syndic','conseil'].includes(currentProfile);
+    return `<div class="incident-card" style="animation-delay:${i*0.06}s" onclick="openDetail('${inc.id}')">
+      <div class="incident-header">
+        <div class="incident-title">${inc.titre}</div>
+        <span class="meta-tag tag-${inc.priorite||'normale'}">${prioLabels[inc.priorite]||inc.priorite}</span>
+      </div>
+      <div class="incident-desc">${inc.description}</div>
+      <div class="incident-meta">
+        <span class="meta-tag tag-${inc.statut||'signale'}">${statLabels[inc.statut]||inc.statut}</span>
+        ${inc.lot ? `<span class="meta-tag" style="background:rgba(91,127,255,.1);color:var(--accent)">🏠 ${inc.lot}</span>` : ''}
+      </div>
+      <div class="incident-footer">
+        <div>
+          <div class="incident-date">📅 ${date}</div>
+          ${inc.prestataire ? `<div class="incident-prest">👷 ${inc.prestataire}</div>` : ''}
+        </div>
+        <button class="btn-action" onclick="event.stopPropagation();openDetail('${inc.id}')">Voir le détail →</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Créer incident ──
+function openCreateModal() { document.getElementById('createModal').classList.add('show'); }
+
+async function createIncident() {
+  const titre = document.getElementById('i-titre').value.trim();
+  const desc  = document.getElementById('i-desc').value.trim();
+  const prio  = document.getElementById('i-priorite').value;
+  const lot   = document.getElementById('i-lot').value.trim();
+
+  let ok = true;
+  if (!titre) { document.getElementById('e-titre').classList.add('show'); ok=false; } else document.getElementById('e-titre').classList.remove('show');
+  if (!desc)  { document.getElementById('e-desc').classList.add('show');  ok=false; } else document.getElementById('e-desc').classList.remove('show');
+  if (!ok) return;
+
+  const btn = document.getElementById('btnCreate');
+  btn.disabled = true; btn.textContent = 'Envoi...';
+  try {
+    await db.collection('incidents').add({
+      titre, description: desc, priorite: prio, lot,
+      statut: 'signale',
+      createdBy: currentUser.uid,
+      createdByName: currentUserName,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      suivi: []
+    });
+    closeModal('createModal');
+    showToast('✅ Incident signalé avec succès !');
+    ['i-titre','i-desc','i-lot'].forEach(id => document.getElementById(id).value = '');
+  } catch(e) {
+    showToast('❌ Erreur lors du signalement', true);
+  } finally {
+    btn.disabled = false; btn.textContent = '✅ Signaler l\'incident';
+  }
+}
+
+// ── Détail incident ──
+async function openDetail(id) {
+  const inc = allIncidents.find(x => x.id === id);
+  if (!inc) return;
+
+  const date = inc.createdAt?.toDate ? inc.createdAt.toDate().toLocaleDateString('fr-FR') : '—';
+  const prioLabels = { normale:'🟢 Normale', haute:'🟡 Haute', urgente:'🔴 Urgente' };
+  const statLabels = { signale:'Signalé', assigne:'Assigné', en_cours:'En cours', termine:'Terminé', resolu:'Résolu', archive:'Archivé' };
+  const canManage = ['syndic','conseil'].includes(currentProfile);
+
+  const suivi = (inc.suivi||[]).map(s => `
+    <div class="suivi-item">
+      <div class="suivi-meta">
+        <span class="suivi-author">${s.auteur}</span>
+        <span class="suivi-date">${s.date}</span>
+      </div>
+      <div class="suivi-note">${s.note}</div>
+    </div>`).join('');
+
+  const actionBtns = canManage ? `
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1rem">
+      ${inc.statut === 'signale' ? `<button class="btn-info" onclick="closeModal('detailModal');openAssign('${id}')">👷 Assigner</button>` : ''}
+      ${inc.statut === 'assigne' ? `<button class="btn-info" onclick="updateStatut('${id}','en_cours')">▶️ Mettre en cours</button>` : ''}
+      ${inc.statut === 'en_cours' ? `<button class="btn-success" onclick="updateStatut('${id}','resolu')">✅ Marquer résolu</button>` : ''}
+      ${inc.statut !== 'archive' ? `<button class="btn-secondary" onclick="updateStatut('${id}','archive')" style="margin-left:auto">🗄️ Archiver</button>` : ''}
+    </div>` : '';
+
+  document.getElementById('detailTitle').textContent = `🔧 ${inc.titre}`;
+  document.getElementById('detailBody').innerHTML = `
+    <div class="form-row" style="margin-bottom:.75rem">
+      <div class="info-row"><span class="info-label">Priorité</span><span class="info-value">${prioLabels[inc.priorite]||inc.priorite}</span></div>
+      <div class="info-row"><span class="info-label">Statut</span><span class="info-value">${statLabels[inc.statut]||inc.statut}</span></div>
+    </div>
+    <div class="info-row"><span class="info-label">Date signalement</span><span class="info-value">${date}</span></div>
+    ${inc.lot ? `<div class="info-row"><span class="info-label">Lot concerné</span><span class="info-value">🏠 ${inc.lot}</span></div>` : ''}
+    ${inc.createdByName ? `<div class="info-row"><span class="info-label">Signalé par</span><span class="info-value">${inc.createdByName}</span></div>` : ''}
+    ${inc.prestataire ? `<div class="info-row"><span class="info-label">Prestataire</span><span class="info-value">👷 ${inc.prestataire}</span></div>` : ''}
+    <div class="divider"></div>
+    <div class="section-label">Description</div>
+    <div style="background:var(--card);border-radius:8px;padding:1rem;font-size:.88rem;color:var(--muted);line-height:1.7">${inc.description}</div>
+    ${inc.suivi?.length > 0 ? `<div class="divider"></div><div class="section-label">📋 Suivi</div>${suivi}` : ''}
+    ${actionBtns}
+  `;
+  document.getElementById('detailModal').classList.add('show');
+}
+
+// ── Assigner ──
+function openAssign(id) {
+  document.getElementById('assign-id').value = id;
+  document.getElementById('assignModal').classList.add('show');
+}
+
+async function doAssign() {
+  const id    = document.getElementById('assign-id').value;
+  const prest = document.getElementById('a-prest').value;
+  const inst  = document.getElementById('a-inst').value.trim();
+  if (!prest) { showToast('⚠️ Choisissez un prestataire', true); return; }
+
+  const note = `Assigné à ${prest}${inst ? ` — ${inst}` : ''}`;
+  try {
+    await db.collection('incidents').doc(id).update({
+      statut: 'assigne',
+      prestataire: prest,
+      suivi: firebase.firestore.FieldValue.arrayUnion({
+        date: new Date().toLocaleDateString('fr-FR'),
+        auteur: currentUserName,
+        note
+      })
+    });
+    closeModal('assignModal');
+    document.getElementById('a-prest').value = '';
+    document.getElementById('a-inst').value = '';
+    showToast('✅ Incident assigné à ' + prest);
+  } catch(e) { showToast('❌ Erreur', true); }
+}
+
+// ── Changer statut ──
+async function updateStatut(id, statut) {
+  const labels = { en_cours:'mis en cours', resolu:'marqué résolu', archive:'archivé' };
+  try {
+    await db.collection('incidents').doc(id).update({
+      statut,
+      suivi: firebase.firestore.FieldValue.arrayUnion({
+        date: new Date().toLocaleDateString('fr-FR'),
+        auteur: currentUserName,
+        note: `Incident ${labels[statut]||statut}`
+      })
+    });
+    closeModal('detailModal');
+    showToast(`✅ Incident ${labels[statut]||statut} !`);
+  } catch(e) { showToast('❌ Erreur', true); }
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+async function handleLogout() { await auth.signOut(); window.location.href = 'login.html'; }
+
+let toastTimer;
+function showToast(msg, isErr=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show' + (isErr?' error':'');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>

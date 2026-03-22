@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoproGest — Baux</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+:root{--navy:#0a0f1e;--card:#141d30;--card2:#1a2540;--border:rgba(99,130,255,.15);--accent:#5b7fff;--accent2:#7c5cfc;--accent3:#38d9a9;--text:#e8eaf6;--muted:#8892b0;--danger:#ff6b6b;--gold:#ffd166;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text);min-height:100vh;}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:240px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:1.5rem 0;z-index:50;}
+.sidebar-logo{display:flex;align-items:center;gap:.7rem;padding:0 1.5rem 1.5rem;border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-weight:800;font-size:1.15rem;text-decoration:none;color:var(--text);}
+.sidebar-logo-icon{width:36px;height:36px;border-radius:10px;flex-shrink:0;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:1.1rem;}
+.nav-section-label{font-size:.68rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:.8rem 1.5rem .4rem;margin-top:.5rem;}
+.nav-item{display:flex;align-items:center;gap:.75rem;padding:.7rem 1.5rem;color:var(--muted);font-size:.88rem;transition:all .2s;border-left:2px solid transparent;text-decoration:none;}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.03);}
+.nav-item.active{color:var(--text);background:rgba(91,127,255,.1);border-left-color:var(--accent);}
+.nav-icon{font-size:1.1rem;width:20px;text-align:center;}
+.sidebar-footer{margin-top:auto;padding:1.5rem;border-top:1px solid var(--border);}
+.user-info{display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem;}
+.user-avatar{width:36px;height:36px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:700;}
+.user-details strong{display:block;font-size:.85rem;font-weight:600;}
+.user-details small{color:var(--muted);font-size:.72rem;}
+.btn-logout{width:100%;padding:.6rem;border-radius:8px;border:1px solid rgba(255,107,107,.3);background:rgba(255,107,107,.08);color:#ff9999;font-family:'DM Sans',sans-serif;font-size:.83rem;cursor:pointer;transition:background .2s;display:flex;align-items:center;justify-content:center;gap:.5rem;}
+.btn-logout:hover{background:rgba(255,107,107,.15);}
+.main{margin-left:240px;padding:2rem 2.5rem;}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem;}
+.page-header h1{font-family:'Syne',sans-serif;font-weight:800;font-size:1.6rem;}
+.page-header p{color:var(--muted);font-size:.92rem;margin-top:.3rem;}
+.btn-create{display:none;align-items:center;gap:.6rem;padding:.75rem 1.4rem;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-family:'DM Sans',sans-serif;font-weight:600;font-size:.92rem;cursor:pointer;transition:opacity .2s;box-shadow:0 4px 16px rgba(91,127,255,.35);}
+.btn-create:hover{opacity:.9;}
+.btn-create.visible{display:flex;}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:2rem;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.2rem;transition:transform .2s;}
+.stat-card:hover{transform:translateY(-2px);}
+.stat-val{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;}
+.stat-lbl{color:var(--muted);font-size:.78rem;margin-top:.2rem;}
+.toolbar{display:flex;gap:.75rem;margin-bottom:1.5rem;flex-wrap:wrap;align-items:center;}
+.search-wrap{position:relative;flex:1;min-width:200px;}
+.search-icon{position:absolute;left:.9rem;top:50%;transform:translateY(-50%);font-size:.95rem;pointer-events:none;}
+.search-input{width:100%;padding:.7rem 1rem .7rem 2.5rem;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.88rem;}
+.search-input:focus{outline:none;border-color:var(--accent);}
+.search-input::placeholder{color:var(--muted);}
+.filter-btn{padding:.5rem 1rem;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.82rem;cursor:pointer;transition:all .2s;}
+.filter-btn:hover{border-color:rgba(91,127,255,.4);color:var(--text);}
+.filter-btn.active{border-color:var(--accent);background:rgba(91,127,255,.12);color:var(--accent);}
+/* BAUX CARDS */
+.baux-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1.25rem;}
+.bail-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.4rem;animation:fadeUp .35s ease both;transition:transform .2s,border-color .2s;}
+.bail-card:hover{transform:translateY(-3px);border-color:rgba(91,127,255,.3);}
+.bail-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;}
+.bail-lot{font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;color:var(--accent);}
+.bail-status{display:inline-flex;align-items:center;gap:.35rem;padding:.28rem .7rem;border-radius:20px;font-size:.72rem;font-weight:600;}
+.s-actif{background:rgba(56,217,169,.12);color:var(--accent3);}
+.s-termine{background:rgba(136,146,176,.12);color:var(--muted);}
+.s-expire{background:rgba(255,107,107,.12);color:var(--danger);}
+.bail-info{display:flex;flex-direction:column;gap:.4rem;margin-bottom:1rem;}
+.bail-row{display:flex;justify-content:space-between;font-size:.83rem;}
+.bail-row span:first-child{color:var(--muted);}
+.bail-footer{display:flex;justify-content:space-between;align-items:center;padding-top:.9rem;border-top:1px solid var(--border);}
+.bail-loyer{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:var(--gold);}
+.bail-actions{display:flex;gap:.4rem;}
+.btn-sm{padding:.4rem .8rem;border-radius:7px;border:1px solid var(--border);background:var(--card2);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.78rem;cursor:pointer;transition:all .2s;}
+.btn-sm:hover{border-color:var(--accent);color:var(--accent);}
+.btn-sm.danger:hover{border-color:var(--danger);color:var(--danger);}
+/* ALERT */
+.alert-box{background:rgba(255,209,102,.08);border:1px solid rgba(255,209,102,.25);border-radius:10px;padding:.9rem 1rem;font-size:.85rem;color:var(--gold);margin-bottom:1.5rem;display:flex;align-items:center;gap:.6rem;}
+/* EMPTY */
+.empty-state{text-align:center;padding:4rem 2rem;color:var(--muted);}
+.empty-icon{font-size:3rem;margin-bottom:1rem;opacity:.4;}
+.empty-state h3{font-family:'Syne',sans-serif;font-size:1.1rem;color:var(--text);margin-bottom:.5rem;}
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;padding:1rem;}
+.modal-overlay.show{opacity:1;pointer-events:all;}
+.modal-box{background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:2rem;max-width:520px;width:100%;max-height:90vh;overflow-y:auto;transform:translateY(20px);transition:transform .25s;}
+.modal-overlay.show .modal-box{transform:translateY(0);}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;}
+.modal-header h2{font-family:'Syne',sans-serif;font-weight:800;font-size:1.15rem;}
+.modal-close{background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;}
+.form-group{display:flex;flex-direction:column;gap:.4rem;margin-bottom:1rem;}
+.form-label{font-size:.75rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);}
+.form-input,.form-select{width:100%;padding:.8rem 1rem;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.9rem;transition:border-color .2s;}
+.form-input:focus,.form-select:focus{outline:none;border-color:var(--accent);}
+.form-input::placeholder{color:var(--muted);}
+.form-select option{background:var(--card2);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.ferr{color:var(--danger);font-size:.74rem;display:none;}
+.ferr.show{display:block;}
+.btn-submit{width:100%;padding:.88rem;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-family:'DM Sans',sans-serif;font-weight:600;font-size:1rem;cursor:pointer;margin-top:.5rem;transition:opacity .2s;}
+.btn-submit:hover{opacity:.9;}
+.btn-submit:disabled{opacity:.5;cursor:not-allowed;}
+.loading-screen{position:fixed;inset:0;background:var(--navy);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:1rem;}
+.loading-spinner{width:44px;height:44px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+.loading-text{color:var(--muted);font-size:.9rem;}
+.toast{position:fixed;bottom:2rem;right:2rem;z-index:1000;background:var(--card2);border:1px solid var(--border);border-left:4px solid var(--accent3);border-radius:12px;padding:1rem 1.4rem;font-size:.88rem;color:var(--text);box-shadow:0 10px 40px rgba(0,0,0,.4);transform:translateX(120%);transition:transform .35s cubic-bezier(.22,1,.36,1);max-width:320px;}
+.toast.show{transform:translateX(0);}
+.toast.error{border-left-color:var(--danger);}
+@media(max-width:900px){.sidebar{display:none;}.main{margin-left:0;padding:1.5rem;}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+@keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+<div class="loading-screen" id="ls"><div class="loading-spinner"></div><div class="loading-text">Chargement...</div></div>
+
+<aside class="sidebar" id="sidebar" style="display:none"></aside>
+
+<main class="main" id="mainContent" style="display:none">
+  <div class="page-header">
+    <div><h1>📋 Gestion des Baux</h1><p>Contrats de location de la copropriété</p></div>
+    <button class="btn-create" id="btnCreate" onclick="openModal('bailModal')">+ Nouveau bail</button>
+  </div>
+
+  <div id="alertExpire" class="alert-box" style="display:none">
+    ⚠️ <span id="alertExpireText"></span>
+  </div>
+
+  <div class="stats">
+    <div class="stat-card"><div class="stat-val" id="stTotal">0</div><div class="stat-lbl">Total baux</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--accent3)" id="stActif">0</div><div class="stat-lbl">Actifs</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--gold)" id="stLoyer">0 €</div><div class="stat-lbl">Loyers / mois</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--danger)" id="stExpire">0</div><div class="stat-lbl">Expirant bientôt</div></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="search-input" id="searchInput" placeholder="Rechercher par lot, locataire..." oninput="renderBaux()">
+    </div>
+    <button class="filter-btn active" onclick="setFilter('all',this)">Tous</button>
+    <button class="filter-btn" onclick="setFilter('actif',this)">Actifs</button>
+    <button class="filter-btn" onclick="setFilter('termine',this)">Terminés</button>
+    <button class="filter-btn" onclick="setFilter('expire',this)">⚠️ Expirent bientôt</button>
+  </div>
+
+  <div class="baux-grid" id="bauxGrid"></div>
+</main>
+
+<!-- MODAL BAIL -->
+<div class="modal-overlay" id="bailModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 id="bailModalTitle">📋 Nouveau bail</h2>
+      <button class="modal-close" onclick="closeModal('bailModal')">✕</button>
+    </div>
+    <input type="hidden" id="bail-id">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">N° Lot *</label>
+        <input type="text" class="form-input" id="b-lot" placeholder="A012">
+        <span class="ferr" id="e-blot">Champ requis</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Locataire *</label>
+        <input type="text" class="form-input" id="b-locataire" placeholder="Nom du locataire">
+        <span class="ferr" id="e-bloc">Champ requis</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Propriétaire</label>
+      <input type="text" class="form-input" id="b-proprio" placeholder="Nom du propriétaire">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Date début *</label>
+        <input type="date" class="form-input" id="b-debut">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date fin</label>
+        <input type="date" class="form-input" id="b-fin">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Loyer (€) *</label>
+        <input type="number" class="form-input" id="b-loyer" placeholder="1200" step="0.01">
+        <span class="ferr" id="e-bloyer">Montant invalide</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Charges (€)</label>
+        <input type="number" class="form-input" id="b-charges" placeholder="150" step="0.01">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Dépôt de garantie (€)</label>
+      <input type="number" class="form-input" id="b-depot" placeholder="2400" step="0.01">
+    </div>
+    <button class="btn-submit" id="btnBail" onclick="saveBail()">✅ Créer le bail</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="sidebar.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+let currentUser=null, currentProfile='locataire', allBaux=[], currentFilter='all';
+
+auth.onAuthStateChanged(async user => {
+  if (!user) { window.location.href='login.html'; return; }
+  currentUser=user;
+  try {
+    const snap=await db.collection('users').doc(user.uid).get();
+    if (snap.exists) {
+      const d=snap.data();
+      currentProfile=d.profile||'locataire';
+      const name=d.prenom?`${d.prenom} ${d.nom||''}`.trim():user.displayName||user.email.split('@')[0];
+      buildSidebar(currentProfile||d.profile||'locataire', name, user.email, 'baux.html');
+    }
+  } catch(e) {}
+  if (['syndic','conseil'].includes(currentProfile)) document.getElementById('btnCreate').classList.add('visible');
+  document.getElementById('ls').style.display='none';
+  document.getElementById('sidebar').style.display='flex';
+  document.getElementById('mainContent').style.display='block';
+  const today=new Date().toISOString().split('T')[0];
+  document.getElementById('b-debut').value=today;
+  loadBaux();
+});
+
+function loadBaux() {
+  db.collection('baux').orderBy('createdAt','desc').onSnapshot(snap => {
+    allBaux=[];
+    snap.forEach(doc=>allBaux.push({id:doc.id,...doc.data()}));
+    updateStats(); checkExpiring(); renderBaux();
+  });
+}
+
+function updateStats() {
+  const actifs=allBaux.filter(b=>b.statut==='actif');
+  const loyers=actifs.reduce((s,b)=>s+(b.loyer||0),0);
+  const expire=allBaux.filter(b=>isExpiringSoon(b)).length;
+  document.getElementById('stTotal').textContent=allBaux.length;
+  document.getElementById('stActif').textContent=actifs.length;
+  document.getElementById('stLoyer').textContent=loyers.toLocaleString('fr-FR')+' €';
+  document.getElementById('stExpire').textContent=expire;
+}
+
+function isExpiringSoon(b) {
+  if (!b.dateFin||b.statut!=='actif') return false;
+  const diff=(new Date(b.dateFin)-new Date())/(1000*60*60*24);
+  return diff>=0&&diff<=30;
+}
+
+function checkExpiring() {
+  const n=allBaux.filter(b=>isExpiringSoon(b)).length;
+  const el=document.getElementById('alertExpire');
+  if (n>0) { el.style.display='flex'; document.getElementById('alertExpireText').textContent=`${n} bail(s) expirant dans les 30 prochains jours.`; }
+  else el.style.display='none';
+}
+
+function setFilter(f,btn) {
+  currentFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); renderBaux();
+}
+
+function renderBaux() {
+  const q=document.getElementById('searchInput').value.toLowerCase();
+  let list=allBaux;
+  if (currentFilter==='actif') list=list.filter(b=>b.statut==='actif');
+  else if (currentFilter==='termine') list=list.filter(b=>b.statut==='termine');
+  else if (currentFilter==='expire') list=list.filter(b=>isExpiringSoon(b));
+  if (q) list=list.filter(b=>(b.lot||'').toLowerCase().includes(q)||(b.locataire||'').toLowerCase().includes(q));
+
+  const grid=document.getElementById('bauxGrid');
+  const isSyndic=['syndic','conseil'].includes(currentProfile);
+
+  if (!list.length) { grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">📋</div><h3>Aucun bail trouvé</h3></div>`; return; }
+
+  grid.innerHTML=list.map((b,i)=>{
+    const statut=b.statut==='actif'?'actif':b.statut==='termine'?'termine':isExpiringSoon(b)?'expire':'actif';
+    const sLabel={actif:'● Actif',termine:'● Terminé',expire:'⚠️ Expire bientôt'}[statut]||'Actif';
+    const sCls={actif:'s-actif',termine:'s-termine',expire:'s-expire'}[statut]||'s-actif';
+    const total=(b.loyer||0)+(b.charges||0);
+    return `<div class="bail-card" style="animation-delay:${i*.06}s">
+      <div class="bail-header">
+        <div class="bail-lot">Lot ${b.lot||'—'}</div>
+        <span class="bail-status ${sCls}">${sLabel}</span>
+      </div>
+      <div class="bail-info">
+        <div class="bail-row"><span>Locataire</span><span>${b.locataire||'—'}</span></div>
+        <div class="bail-row"><span>Propriétaire</span><span>${b.proprio||'—'}</span></div>
+        <div class="bail-row"><span>Début</span><span>${b.dateDebut||'—'}</span></div>
+        <div class="bail-row"><span>Fin</span><span>${b.dateFin||'Indéterminé'}</span></div>
+        <div class="bail-row"><span>Dépôt garantie</span><span>${(b.depot||0).toLocaleString('fr-FR')} €</span></div>
+      </div>
+      <div class="bail-footer">
+        <div>
+          <div class="bail-loyer">${(b.loyer||0).toLocaleString('fr-FR')} €<span style="font-size:.72rem;color:var(--muted);font-weight:400">/mois</span></div>
+          <div style="font-size:.75rem;color:var(--muted)">+ ${(b.charges||0).toLocaleString('fr-FR')} € charges → ${total.toLocaleString('fr-FR')} € total</div>
+        </div>
+        ${isSyndic?`<div class="bail-actions">
+          <button class="btn-sm" onclick="openEdit('${b.id}')">✏️</button>
+          ${b.statut==='actif'?`<button class="btn-sm danger" onclick="terminerBail('${b.id}')">Terminer</button>`:''}
+        </div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function saveBail() {
+  const id=document.getElementById('bail-id').value;
+  const lot=document.getElementById('b-lot').value.trim();
+  const locataire=document.getElementById('b-locataire').value.trim();
+  const loyer=parseFloat(document.getElementById('b-loyer').value);
+  let ok=true;
+  if (!lot)        { document.getElementById('e-blot').classList.add('show'); ok=false; } else document.getElementById('e-blot').classList.remove('show');
+  if (!locataire)  { document.getElementById('e-bloc').classList.add('show'); ok=false; } else document.getElementById('e-bloc').classList.remove('show');
+  if (!loyer||loyer<=0) { document.getElementById('e-bloyer').classList.add('show'); ok=false; } else document.getElementById('e-bloyer').classList.remove('show');
+  if (!ok) return;
+
+  const data={
+    lot, locataire, loyer,
+    proprio:document.getElementById('b-proprio').value.trim(),
+    dateDebut:document.getElementById('b-debut').value,
+    dateFin:document.getElementById('b-fin').value||null,
+    charges:parseFloat(document.getElementById('b-charges').value)||0,
+    depot:parseFloat(document.getElementById('b-depot').value)||0,
+    statut:'actif',
+  };
+  const btn=document.getElementById('btnBail');
+  btn.disabled=true; btn.textContent='Enregistrement...';
+  try {
+    if (id) { await db.collection('baux').doc(id).update(data); showToast('✅ Bail modifié !'); }
+    else { await db.collection('baux').add({...data,createdBy:currentUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()}); showToast('✅ Bail créé !'); }
+    closeModal('bailModal');
+  } catch(e) { showToast('❌ Erreur',true); }
+  finally { btn.disabled=false; btn.textContent='✅ Créer le bail'; }
+}
+
+function openEdit(id) {
+  const b=allBaux.find(x=>x.id===id); if (!b) return;
+  document.getElementById('bail-id').value=id;
+  document.getElementById('bailModalTitle').textContent='✏️ Modifier le bail';
+  document.getElementById('btnBail').textContent='💾 Enregistrer';
+  document.getElementById('b-lot').value=b.lot||'';
+  document.getElementById('b-locataire').value=b.locataire||'';
+  document.getElementById('b-proprio').value=b.proprio||'';
+  document.getElementById('b-debut').value=b.dateDebut||'';
+  document.getElementById('b-fin').value=b.dateFin||'';
+  document.getElementById('b-loyer').value=b.loyer||'';
+  document.getElementById('b-charges').value=b.charges||'';
+  document.getElementById('b-depot').value=b.depot||'';
+  openModal('bailModal');
+}
+
+async function terminerBail(id) {
+  if (!confirm('Terminer ce bail ?')) return;
+  await db.collection('baux').doc(id).update({statut:'termine'});
+  showToast('✅ Bail terminé.');
+}
+
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+  document.getElementById('bail-id').value='';
+  document.getElementById('bailModalTitle').textContent='📋 Nouveau bail';
+  document.getElementById('btnBail').textContent='✅ Créer le bail';
+}
+async function handleLogout() { await auth.signOut(); window.location.href='login.html'; }
+let toastTimer;
+function showToast(msg,isErr=false) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show'+(isErr?' error':'');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),3500);
+}
+</script>
+</body>
+</html>

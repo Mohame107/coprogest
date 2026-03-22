@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoproGest — Administration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+:root{--navy:#0a0f1e;--card:#141d30;--card2:#1a2540;--border:rgba(99,130,255,.15);--accent:#5b7fff;--accent2:#7c5cfc;--accent3:#38d9a9;--text:#e8eaf6;--muted:#8892b0;--danger:#ff6b6b;--gold:#ffd166;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text);min-height:100vh;}
+
+/* ── SIDEBAR ── */
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:240px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:1.5rem 0;z-index:50;}
+.sidebar-logo{display:flex;align-items:center;gap:.7rem;padding:0 1.5rem 1.5rem;border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-weight:800;font-size:1.15rem;text-decoration:none;color:var(--text);}
+.sidebar-logo-icon{width:36px;height:36px;border-radius:10px;flex-shrink:0;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:1.1rem;}
+.nav-section-label{font-size:.68rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:.8rem 1.5rem .4rem;margin-top:.5rem;}
+.nav-item{display:flex;align-items:center;gap:.75rem;padding:.7rem 1.5rem;color:var(--muted);cursor:pointer;font-size:.88rem;transition:all .2s;border-left:2px solid transparent;text-decoration:none;}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.03);}
+.nav-item.active{color:var(--text);background:rgba(91,127,255,.1);border-left-color:var(--accent);}
+.nav-icon{font-size:1.1rem;width:20px;text-align:center;}
+.sidebar-footer{margin-top:auto;padding:1.5rem;border-top:1px solid var(--border);}
+.user-info{display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem;}
+.user-avatar{width:36px;height:36px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:700;}
+.user-details strong{display:block;font-size:.85rem;font-weight:600;}
+.user-details small{color:var(--muted);font-size:.72rem;}
+.btn-logout{width:100%;padding:.6rem;border-radius:8px;border:1px solid rgba(255,107,107,.3);background:rgba(255,107,107,.08);color:#ff9999;font-family:'DM Sans',sans-serif;font-size:.83rem;cursor:pointer;transition:background .2s;display:flex;align-items:center;justify-content:center;gap:.5rem;}
+.btn-logout:hover{background:rgba(255,107,107,.15);}
+
+/* ── MAIN ── */
+.main{margin-left:240px;padding:2rem 2.5rem;}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem;}
+.page-header h1{font-family:'Syne',sans-serif;font-weight:800;font-size:1.6rem;}
+.page-header p{color:var(--muted);font-size:.92rem;margin-top:.3rem;}
+.btn-create{display:flex;align-items:center;gap:.6rem;padding:.75rem 1.4rem;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-family:'DM Sans',sans-serif;font-weight:600;font-size:.92rem;cursor:pointer;transition:opacity .2s,transform .15s;box-shadow:0 4px 16px rgba(91,127,255,.35);}
+.btn-create:hover{opacity:.9;transform:translateY(-1px);}
+
+/* ── STATS ── */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:2rem;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.2rem;text-align:center;transition:transform .2s;}
+.stat-card:hover{transform:translateY(-2px);}
+.stat-val{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;}
+.stat-lbl{color:var(--muted);font-size:.78rem;margin-top:.2rem;}
+
+/* ── RECHERCHE & FILTRES ── */
+.toolbar{display:flex;gap:.75rem;margin-bottom:1.5rem;flex-wrap:wrap;align-items:center;}
+.search-wrap{position:relative;flex:1;min-width:200px;}
+.search-icon{position:absolute;left:.9rem;top:50%;transform:translateY(-50%);font-size:.95rem;pointer-events:none;}
+.search-input{width:100%;padding:.7rem 1rem .7rem 2.5rem;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.88rem;transition:border-color .2s;}
+.search-input:focus{outline:none;border-color:var(--accent);}
+.search-input::placeholder{color:var(--muted);}
+.filter-btn{padding:.5rem 1rem;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.82rem;cursor:pointer;transition:all .2s;}
+.filter-btn:hover{border-color:rgba(91,127,255,.4);color:var(--text);}
+.filter-btn.active{border-color:var(--accent);background:rgba(91,127,255,.12);color:var(--accent);}
+
+/* ── TABLE RÉSIDENTS ── */
+.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+.table-header{display:grid;grid-template-columns:2fr 2fr 1.2fr 1.2fr 1fr auto;gap:1rem;padding:.9rem 1.5rem;border-bottom:1px solid var(--border);font-size:.72rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+.table-row{display:grid;grid-template-columns:2fr 2fr 1.2fr 1.2fr 1fr auto;gap:1rem;padding:1rem 1.5rem;border-bottom:1px solid var(--border);align-items:center;transition:background .15s;animation:fadeUp .3s ease both;}
+.table-row:last-child{border-bottom:none;}
+.table-row:hover{background:rgba(255,255,255,.02);}
+.resident-info{display:flex;align-items:center;gap:.75rem;}
+.resident-avatar{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:700;}
+.resident-name strong{display:block;font-size:.88rem;font-weight:500;}
+.resident-name small{color:var(--muted);font-size:.75rem;}
+.profile-pill{display:inline-flex;align-items:center;gap:.35rem;padding:.28rem .7rem;border-radius:20px;font-size:.72rem;font-weight:600;}
+.pill-syndic{background:rgba(91,127,255,.15);color:var(--accent);}
+.pill-proprietaire{background:rgba(255,209,102,.15);color:var(--gold);}
+.pill-conseil{background:rgba(56,217,169,.15);color:var(--accent3);}
+.pill-locataire{background:rgba(255,107,107,.15);color:var(--danger);}
+.lot-cell{font-size:.84rem;color:var(--muted);}
+.tel-cell{font-size:.84rem;color:var(--muted);}
+.actions-cell{display:flex;gap:.4rem;}
+.btn-edit{padding:.38rem .7rem;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.78rem;cursor:pointer;transition:all .2s;}
+.btn-edit:hover{border-color:var(--accent);color:var(--accent);}
+.btn-del{padding:.38rem .7rem;border-radius:7px;border:1px solid rgba(255,107,107,.2);background:transparent;color:var(--danger);font-size:.78rem;cursor:pointer;transition:all .2s;}
+.btn-del:hover{background:rgba(255,107,107,.1);}
+
+/* ── EMPTY STATE ── */
+.empty-state{text-align:center;padding:3rem;color:var(--muted);}
+.empty-icon{font-size:2.5rem;margin-bottom:.75rem;opacity:.4;}
+.empty-state h3{font-family:'Syne',sans-serif;font-size:1rem;color:var(--text);margin-bottom:.4rem;}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;padding:1rem;}
+.modal-overlay.show{opacity:1;pointer-events:all;}
+.modal-box{background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:2rem;max-width:500px;width:100%;max-height:90vh;overflow-y:auto;transform:translateY(20px);transition:transform .25s;}
+.modal-overlay.show .modal-box{transform:translateY(0);}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;}
+.modal-header h2{font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;}
+.modal-close{background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;}
+.modal-close:hover{color:var(--text);}
+.form-group{display:flex;flex-direction:column;gap:.4rem;margin-bottom:1rem;}
+.form-label{font-size:.75rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);}
+.form-input,.form-select{width:100%;padding:.8rem 1rem;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.9rem;transition:border-color .2s;}
+.form-input:focus,.form-select:focus{outline:none;border-color:var(--accent);}
+.form-input::placeholder{color:var(--muted);}
+.form-input.error{border-color:var(--danger);}
+.form-select option{background:var(--card2);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.ferr{color:var(--danger);font-size:.74rem;display:none;}
+.ferr.show{display:block;}
+.info-box{background:rgba(91,127,255,.08);border:1px solid rgba(91,127,255,.2);border-radius:10px;padding:.9rem 1rem;font-size:.83rem;color:var(--muted);line-height:1.6;margin-bottom:1rem;}
+.info-box strong{color:var(--accent);}
+.btn-submit{width:100%;padding:.88rem;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-family:'DM Sans',sans-serif;font-weight:600;font-size:1rem;cursor:pointer;margin-top:.5rem;transition:opacity .2s;box-shadow:0 4px 16px rgba(91,127,255,.3);}
+.btn-submit:hover{opacity:.9;}
+.btn-submit:disabled{opacity:.5;cursor:not-allowed;}
+
+/* ── ACCESS DENIED ── */
+.access-denied{position:fixed;inset:0;background:var(--navy);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:1rem;text-align:center;padding:2rem;}
+.access-denied h2{font-family:'Syne',sans-serif;font-size:1.5rem;}
+.access-denied p{color:var(--muted);}
+.access-denied a{color:var(--accent);text-decoration:none;}
+
+/* ── LOADING ── */
+.loading-screen{position:fixed;inset:0;background:var(--navy);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:1rem;}
+.loading-spinner{width:44px;height:44px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+.loading-text{color:var(--muted);font-size:.9rem;}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:2rem;right:2rem;z-index:1000;background:var(--card2);border:1px solid var(--border);border-left:4px solid var(--accent3);border-radius:12px;padding:1rem 1.4rem;font-size:.88rem;color:var(--text);box-shadow:0 10px 40px rgba(0,0,0,.4);transform:translateX(120%);transition:transform .35s cubic-bezier(.22,1,.36,1);max-width:320px;}
+.toast.show{transform:translateX(0);}
+.toast.error{border-left-color:var(--danger);}
+
+@media(max-width:900px){
+  .sidebar{display:none;}.main{margin-left:0;padding:1.5rem;}
+  .table-header,.table-row{grid-template-columns:1fr 1fr auto;}.table-header .col-lot,.table-header .col-tel,.table-row .lot-cell,.table-row .tel-cell{display:none;}
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+@keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<div class="loading-screen" id="ls"><div class="loading-spinner"></div><div class="loading-text">Vérification des accès...</div></div>
+
+<!-- Accès refusé (non syndic) -->
+<div class="access-denied" id="accessDenied" style="display:none">
+  <div style="font-size:3rem">🔒</div>
+  <h2>Accès refusé</h2>
+  <p>Cette page est réservée au <strong>Syndic</strong>.</p>
+  <a href="dashboard.html">← Retour au tableau de bord</a>
+</div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar" style="display:none"></aside>
+
+<!-- MAIN -->
+<main class="main" id="mainContent" style="display:none">
+  <div class="page-header">
+    <div>
+      <h1>👥 Gestion des résidents</h1>
+      <p>Créez et gérez les comptes de la copropriété</p>
+    </div>
+    <button class="btn-create" onclick="openModal()">+ Ajouter un résident</button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-card"><div class="stat-val" id="stTotal">0</div><div class="stat-lbl">Total résidents</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--accent)" id="stSyndic">0</div><div class="stat-lbl">Syndics</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--gold)" id="stProprio">0</div><div class="stat-lbl">Copropriétaires</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--accent3)" id="stConseil">0</div><div class="stat-lbl">Conseil Syndical</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--danger)" id="stLocataire">0</div><div class="stat-lbl">Locataires</div></div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="search-input" id="searchInput" placeholder="Rechercher par nom, email, lot..." oninput="renderTable()">
+    </div>
+    <button class="filter-btn active" onclick="setFilter('all',this)">Tous</button>
+    <button class="filter-btn" onclick="setFilter('syndic',this)">Syndic</button>
+    <button class="filter-btn" onclick="setFilter('proprietaire',this)">Copropriétaire</button>
+    <button class="filter-btn" onclick="setFilter('conseil',this)">Conseil</button>
+    <button class="filter-btn" onclick="setFilter('locataire',this)">Locataire</button>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <div class="table-header">
+      <div>Résident</div>
+      <div>Email</div>
+      <div class="col-lot">Lot</div>
+      <div class="col-tel">Téléphone</div>
+      <div>Profil</div>
+      <div>Actions</div>
+    </div>
+    <div id="tableBody"></div>
+  </div>
+</main>
+
+<!-- MODAL CRÉER / MODIFIER RÉSIDENT -->
+<div class="modal-overlay" id="residentModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 id="modalTitle">➕ Ajouter un résident</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <div class="info-box">
+      <strong>ℹ️ Information :</strong> Un email d'invitation sera envoyé au résident avec un lien pour définir son mot de passe. Son compte sera créé avec le profil sélectionné.
+    </div>
+
+    <input type="hidden" id="edit-uid">
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Prénom *</label>
+        <input type="text" class="form-input" id="r-prenom" placeholder="Jean">
+        <span class="ferr" id="e-prenom">Champ requis</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nom *</label>
+        <input type="text" class="form-input" id="r-nom" placeholder="Dupont">
+        <span class="ferr" id="e-nom">Champ requis</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Adresse e-mail *</label>
+      <input type="email" class="form-input" id="r-email" placeholder="jean.dupont@email.fr">
+      <span class="ferr" id="e-email">Email invalide</span>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Téléphone</label>
+      <input type="tel" class="form-input" id="r-tel" placeholder="+253 77 XX XX XX">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Numéro de lot</label>
+        <input type="text" class="form-input" id="r-lot" placeholder="Lot 5 – Appt 2A">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Profil *</label>
+        <select class="form-select" id="r-profile">
+          <option value="locataire">🔑 Locataire</option>
+          <option value="proprietaire">🏠 Copropriétaire</option>
+          <option value="conseil">⚖️ Conseil Syndical</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Mot de passe temporaire *</label>
+      <input type="text" class="form-input" id="r-pwd" placeholder="Ex : CoproGest2026!">
+      <span class="ferr" id="e-pwd">Minimum 6 caractères</span>
+      <span style="font-size:.74rem;color:var(--muted);margin-top:.3rem;display:block">Le résident devra changer ce mot de passe à sa première connexion.</span>
+    </div>
+    <button class="btn-submit" id="btnSubmit" onclick="saveResident()">➕ Créer le compte</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="sidebar.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+let currentUser = null;
+let allResidents = [];
+let currentFilter = 'all';
+let editingUid = null;
+
+// ── Auth + vérification Syndic ──
+auth.onAuthStateChanged(async user => {
+  if (!user) { window.location.href = 'login.html'; return; }
+  currentUser = user;
+
+  try {
+    const snap = await db.collection('users').doc(user.uid).get();
+    const data = snap.exists ? snap.data() : {};
+
+    if (data.profile !== 'syndic') {
+      document.getElementById('ls').style.display = 'none';
+      document.getElementById('accessDenied').style.display = 'flex';
+      return;
+    }
+
+    const name = data.prenom ? `${data.prenom} ${data.nom||''}`.trim() : user.displayName || 'Syndic';
+    buildSidebar('syndic', name, user.email, 'admin.html');
+
+  } catch(e) { console.error(e); }
+
+  document.getElementById('ls').style.display = 'none';
+  document.getElementById('sidebar').style.display = 'flex';
+  document.getElementById('mainContent').style.display = 'block';
+  loadResidents();
+});
+
+// ── Charger les résidents ──
+function loadResidents() {
+  db.collection('users').onSnapshot(snapshot => {
+    allResidents = [];
+    snapshot.forEach(doc => allResidents.push({ uid: doc.id, ...doc.data() }));
+    updateStats();
+    renderTable();
+  });
+}
+
+// ── Stats ──
+function updateStats() {
+  document.getElementById('stTotal').textContent    = allResidents.length;
+  document.getElementById('stSyndic').textContent   = allResidents.filter(r=>r.profile==='syndic').length;
+  document.getElementById('stProprio').textContent  = allResidents.filter(r=>r.profile==='proprietaire').length;
+  document.getElementById('stConseil').textContent  = allResidents.filter(r=>r.profile==='conseil').length;
+  document.getElementById('stLocataire').textContent= allResidents.filter(r=>r.profile==='locataire').length;
+}
+
+// ── Filtres ──
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTable();
+}
+
+// ── Render table ──
+function renderTable() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  let list = allResidents;
+  if (currentFilter !== 'all') list = list.filter(r => r.profile === currentFilter);
+  if (q) list = list.filter(r =>
+    (r.prenom||'').toLowerCase().includes(q) ||
+    (r.nom||'').toLowerCase().includes(q) ||
+    (r.email||'').toLowerCase().includes(q) ||
+    (r.lot||'').toLowerCase().includes(q)
+  );
+
+  const body = document.getElementById('tableBody');
+  if (list.length === 0) {
+    body.innerHTML = `<div class="empty-state"><div class="empty-icon">👥</div><h3>Aucun résident trouvé</h3><p>Ajoutez des résidents ou modifiez votre recherche.</p></div>`;
+    return;
+  }
+
+  const profileLabels = {syndic:'🏛️ Syndic',proprietaire:'🏠 Copropriétaire',conseil:'⚖️ Conseil',locataire:'🔑 Locataire'};
+  const profilePills  = {syndic:'pill-syndic',proprietaire:'pill-proprietaire',conseil:'pill-conseil',locataire:'pill-locataire'};
+  const avatarColors  = {syndic:'#5b7fff',proprietaire:'#ffd166',conseil:'#38d9a9',locataire:'#ff6b6b'};
+
+  body.innerHTML = list.map((r,i) => {
+    const name = `${r.prenom||''} ${r.nom||''}`.trim() || r.email || '?';
+    const initiale = (name && name.length > 0) ? name.charAt(0).toUpperCase() : '?';
+    const color = avatarColors[r.profile] || '#8892b0';
+    return `<div class="table-row" style="animation-delay:${i*0.05}s">
+      <div class="resident-info">
+        <div class="resident-avatar" style="background:${color}22;color:${color}">${initiale}</div>
+        <div class="resident-name"><strong>${name}</strong><small>${r.copro||'—'}</small></div>
+      </div>
+      <div style="font-size:.84rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.email||'—'}</div>
+      <div class="lot-cell">${r.lot||'—'}</div>
+      <div class="tel-cell">${r.tel||'—'}</div>
+      <div><span class="profile-pill ${profilePills[r.profile]||''}">${profileLabels[r.profile]||r.profile}</span></div>
+      <div class="actions-cell">
+        <button class="btn-edit" onclick="openEdit('${r.uid}')">✏️</button>
+        <button class="btn-del" onclick="deleteResident('${r.uid}','${name}')">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Créer / Modifier résident ──
+async function saveResident() {
+  const prenom  = document.getElementById('r-prenom').value.trim();
+  const nom     = document.getElementById('r-nom').value.trim();
+  const email   = document.getElementById('r-email').value.trim();
+  const tel     = document.getElementById('r-tel').value.trim();
+  const lot     = document.getElementById('r-lot').value.trim();
+  const profile = document.getElementById('r-profile').value;
+  const pwd     = document.getElementById('r-pwd').value;
+  const uid     = document.getElementById('edit-uid').value;
+
+  // Validation
+  let ok = true;
+  if (!prenom){ setErr('e-prenom','r-prenom',true); ok=false; } else setErr('e-prenom','r-prenom',false);
+  if (!nom)   { setErr('e-nom',   'r-nom',   true); ok=false; } else setErr('e-nom',  'r-nom',   false);
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ setErr('e-email','r-email',true); ok=false; } else setErr('e-email','r-email',false);
+  if (!uid && pwd.length < 6){ setErr('e-pwd','r-pwd',true); ok=false; } else setErr('e-pwd','r-pwd',false);
+  if (!ok) return;
+
+  const btn = document.getElementById('btnSubmit');
+  btn.disabled = true; btn.textContent = 'Enregistrement...';
+
+  try {
+    if (uid) {
+      // ── MODE MODIFICATION (Firestore uniquement) ──
+      await db.collection('users').doc(uid).update({
+        prenom, nom, tel, lot, profile,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      showToast('✅ Résident mis à jour !');
+    } else {
+      // ── MODE CRÉATION ──
+      // Créer le compte Firebase Auth (secondary app pour ne pas déconnecter le Syndic)
+      const secondaryApp = firebase.initializeApp(firebase.app().options, 'secondary_' + Date.now());
+      const secondaryAuth = secondaryApp.auth();
+      const cred = await secondaryAuth.createUserWithEmailAndPassword(email, pwd);
+      await secondaryAuth.currentUser.updateProfile({ displayName: `${prenom} ${nom}` });
+      const newUid = cred.user.uid;
+      await secondaryAuth.signOut();
+      await secondaryApp.delete();
+
+      // Sauvegarder dans Firestore
+      await db.collection('users').doc(newUid).set({
+        prenom, nom, email, tel, lot, profile,
+        createdBy: currentUser.uid,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      showToast(`✅ Compte créé pour ${prenom} ${nom} !`);
+    }
+    closeModal();
+  } catch(e) {
+    showToast('❌ ' + firebaseErr(e.code), true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = uid ? '💾 Enregistrer les modifications' : '➕ Créer le compte';
+  }
+}
+
+// ── Ouvrir modal édition ──
+function openEdit(uid) {
+  const r = allResidents.find(x => x.uid === uid);
+  if (!r) return;
+  editingUid = uid;
+  document.getElementById('edit-uid').value   = uid;
+  document.getElementById('modalTitle').textContent = '✏️ Modifier le résident';
+  document.getElementById('r-prenom').value   = r.prenom || '';
+  document.getElementById('r-nom').value      = r.nom    || '';
+  document.getElementById('r-email').value    = r.email  || '';
+  document.getElementById('r-email').disabled = true;
+  document.getElementById('r-tel').value      = r.tel    || '';
+  document.getElementById('r-lot').value      = r.lot    || '';
+  document.getElementById('r-profile').value  = r.profile|| 'locataire';
+  document.getElementById('r-pwd').style.display = 'none';
+  document.getElementById('e-pwd').style.display  = 'none';
+  document.getElementById('btnSubmit').textContent = '💾 Enregistrer les modifications';
+  openModal();
+}
+
+// ── Supprimer résident ──
+async function deleteResident(uid, name) {
+  if (!confirm(`Supprimer le compte de ${name} ? Cette action est irréversible.`)) return;
+  try {
+    await db.collection('users').doc(uid).delete();
+    showToast(`🗑️ Compte de ${name} supprimé.`);
+  } catch(e) {
+    showToast('❌ Erreur lors de la suppression', true);
+  }
+}
+
+// ── Modal ──
+function openModal() { document.getElementById('residentModal').classList.add('show'); }
+function closeModal() {
+  document.getElementById('residentModal').classList.remove('show');
+  // Reset form
+  editingUid = null;
+  document.getElementById('edit-uid').value = '';
+  document.getElementById('modalTitle').textContent = '➕ Ajouter un résident';
+  document.getElementById('btnSubmit').textContent = '➕ Créer le compte';
+  document.getElementById('r-email').disabled = false;
+  document.getElementById('r-pwd').style.display = '';
+  ['r-prenom','r-nom','r-email','r-tel','r-lot','r-pwd'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('r-profile').value = 'locataire';
+}
+
+// ── Déconnexion ──
+async function handleLogout() { await auth.signOut(); window.location.href = 'login.html'; }
+
+// ── Helpers ──
+function setErr(errId, inputId, show) {
+  document.getElementById(errId).classList.toggle('show', show);
+  document.getElementById(inputId).classList.toggle('error', show);
+}
+function firebaseErr(code) {
+  return({'auth/email-already-in-use':'Email déjà utilisé.','auth/invalid-email':'Email invalide.','auth/weak-password':'Mot de passe trop faible.','auth/network-request-failed':'Erreur réseau.'}[code]||'Erreur : '+code);
+}
+let toastTimer;
+function showToast(msg, isErr=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show' + (isErr?' error':'');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>

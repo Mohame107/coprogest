@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoproGest — Tableau de bord</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+:root{--bg:#0b0d14;--surface:#111320;--card:#161927;--border:#1e2235;--border-light:#252a3d;--accent:#3b82f6;--accent-glow:rgba(59,130,246,0.15);--green:#10b981;--green-bg:rgba(16,185,129,0.12);--yellow:#f59e0b;--yellow-bg:rgba(245,158,11,0.12);--red:#ef4444;--red-bg:rgba(239,68,68,0.12);--purple:#8b5cf6;--purple-bg:rgba(139,92,246,0.12);--cyan:#06b6d4;--text:#e2e8f0;--text-sub:#94a3b8;--text-muted:#4b5563;--mono:'JetBrains Mono',monospace;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Outfit','Segoe UI',sans-serif;min-height:100vh;}
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:var(--surface);}::-webkit-scrollbar-thumb{background:var(--border-light);border-radius:4px;}
+#app{display:flex;min-height:100vh;}
+#sidebar{width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;position:fixed;top:0;left:0;z-index:50;overflow-y:auto;}
+#main{margin-left:240px;flex:1;padding:26px 30px;min-height:100vh;background:radial-gradient(ellipse at 80% 0%,rgba(59,130,246,.04) 0%,transparent 50%),var(--bg);}
+.sb-header{padding:18px 16px 14px;border-bottom:1px solid var(--border);}
+.sb-logo{display:flex;align-items:center;gap:9px;}
+.sb-logo-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;font-size:18px;}
+.sb-title{font-weight:800;font-size:17px;}.sb-sub{color:var(--text-muted);font-size:10px;margin-top:1px;}
+.sb-user{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px;}
+.sb-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;flex-shrink:0;}
+.sb-user-name{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.sb-user-role{font-size:11px;color:var(--text-muted);}
+.sb-nav{flex:1;padding:10px 8px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;margin-bottom:2px;cursor:pointer;transition:all .15s;color:var(--text-sub);font-size:13px;font-weight:500;text-decoration:none;border:none;background:transparent;width:100%;}
+.nav-item:hover{background:var(--card);color:var(--text);}.nav-item.active{background:var(--accent-glow);color:var(--accent);font-weight:600;}
+.nav-icon{font-size:16px;width:20px;text-align:center;}
+.sb-footer{padding:12px 16px;border-top:1px solid var(--border);margin-top:auto;}
+.logout-btn{display:flex;align-items:center;gap:8px;width:100%;padding:9px 12px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--text-muted);font-size:13px;cursor:pointer;transition:all .2s;font-family:'Outfit',sans-serif;}
+.logout-btn:hover{background:var(--red-bg);color:var(--red);border-color:rgba(239,68,68,.3);}
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+.page-title{color:var(--text);font-size:21px;font-weight:700;}.page-breadcrumb{color:var(--text-muted);font-size:12px;margin-top:2px;}
+.alert-box{display:flex;gap:12px;padding:14px 18px;border-radius:12px;margin-bottom:18px;align-items:center;}
+.alert-icon{font-size:20px;}.alert-title{font-weight:600;font-size:14px;}.alert-desc{font-size:13px;margin-top:2px;color:var(--text-sub);}
+.stats-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:17px 20px;flex:1;min-width:155px;border-left:3px solid var(--accent);}
+.stat-icon{font-size:20px;margin-bottom:5px;}.stat-label{color:var(--text-muted);font-size:11px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:2px;}
+.stat-value{color:var(--text);font-size:22px;font-weight:700;font-family:var(--mono);}.stat-sub{color:var(--text-muted);font-size:12px;margin-top:2px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;animation:fadeUp .3s ease both;}
+.card-header{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--border);}
+.card-title{color:var(--text);font-weight:600;font-size:15px;}.card-body{padding:20px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;}
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--surface);border-radius:8px;margin-bottom:6px;}
+.info-label{color:var(--text-sub);font-size:13px;}.info-value{color:var(--text);font-weight:600;font-size:13px;}
+.prog-bar-wrap{margin-bottom:14px;}.prog-bar-top{display:flex;justify-content:space-between;margin-bottom:6px;font-size:12px;color:var(--text-sub);}
+.prog-bar{height:5px;background:var(--border);border-radius:10px;overflow:hidden;}.prog-fill{height:100%;border-radius:10px;transition:width .8s ease;}
+.table-wrap{overflow-x:auto;}table{width:100%;border-collapse:collapse;}thead tr{border-bottom:1px solid var(--border);}
+th{padding:8px 12px;color:var(--text-muted);font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;text-align:left;}
+td{padding:10px 12px;color:var(--text);font-size:13px;border-bottom:1px solid var(--border);}tr:last-child td{border-bottom:none;}tbody tr:hover{background:rgba(255,255,255,.02);}
+.btn{border-radius:8px;font-weight:600;font-size:14px;cursor:pointer;border:1px solid;padding:8px 18px;font-family:'Outfit',sans-serif;transition:opacity .15s;display:inline-block;}
+.btn:hover{opacity:.8;}.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+.btn-success{background:var(--green-bg);color:var(--green);border-color:rgba(16,185,129,.35);}
+.btn-danger{background:var(--red-bg);color:var(--red);border-color:rgba(239,68,68,.35);}
+.btn-ghost{background:transparent;color:var(--text-sub);border-color:var(--border);width:100%;text-align:left;}
+.btn-ghost:hover{background:var(--surface);color:var(--text);}.btn-sm{padding:5px 11px;font-size:12px;}
+.loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:1rem;}
+.spinner{width:44px;height:44px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+.loading-text{color:var(--text-muted);font-size:.9rem;}
+#toast{position:fixed;top:18px;right:18px;z-index:9999;background:var(--green);color:#fff;padding:10px 18px;border-radius:10px;font-weight:600;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.4);animation:fadeUp .3s ease;display:none;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+@keyframes spin{to{transform:rotate(360deg);}}
+@media(max-width:900px){#sidebar{display:none;}#main{margin-left:0;padding:16px;}.grid2{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="loading-screen" id="ls"><div class="spinner"></div><div class="loading-text">Chargement de votre espace…</div></div>
+<div id="toast"></div>
+<div id="app" style="display:none">
+  <aside id="sidebar" style="display:none"></aside>
+  <main id="main"><div id="dashContent"></div></main>
+</div>
+<script src="sidebar.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+const MENUS={
+  syndic:[{icon:'⊞',label:'Tableau de bord',url:'dashboard.html',active:true},{icon:'👥',label:'Résidents',url:'admin.html'},{icon:'🏢',label:'Immeubles',url:'lots.html'},{icon:'💰',label:'Finances',url:'finances.html'},{icon:'🗳️',label:'Assemblées',url:'vote.html'},{icon:'🔧',label:'Incidents',url:'incidents.html'},{icon:'📄',label:'Documents',url:'documents.html'},{icon:'📢',label:'Annonces',url:'annonces.html'},{icon:'📋',label:'Baux',url:'baux.html'}],
+  proprietaire:[{icon:'⊞',label:'Tableau de bord',url:'dashboard.html',active:true},{icon:'🏠',label:'Mes lots',url:'lots.html'},{icon:'💰',label:'Mes charges',url:'finances.html'},{icon:'🗳️',label:'Assemblées',url:'vote.html'},{icon:'🔧',label:'Incidents',url:'incidents.html'},{icon:'📄',label:'Documents',url:'documents.html'},{icon:'📢',label:'Annonces',url:'annonces.html'}],
+  conseil:[{icon:'⊞',label:'Tableau de bord',url:'dashboard.html',active:true},{icon:'👥',label:'Résidents',url:'admin.html'},{icon:'🏢',label:'Immeubles',url:'lots.html'},{icon:'💰',label:'Finances',url:'finances.html'},{icon:'🗳️',label:'Assemblées',url:'vote.html'},{icon:'🔧',label:'Incidents',url:'incidents.html'},{icon:'📄',label:'Documents',url:'documents.html'},{icon:'📢',label:'Annonces',url:'annonces.html'}],
+  locataire:[{icon:'⊞',label:'Tableau de bord',url:'dashboard.html',active:true},{icon:'🏠',label:'Mon logement',url:'lots.html'},{icon:'💶',label:'Mes paiements',url:'finances.html'},{icon:'🔧',label:'Incidents',url:'incidents.html'},{icon:'📄',label:'Documents',url:'documents.html'},{icon:'📢',label:'Annonces',url:'annonces.html'}],
+};
+const ROLE_LABELS={syndic:'Syndic',proprietaire:'Copropriétaire',coproprietaire:'Copropriétaire',conseil:'Conseil Syndical',locataire:'Locataire'};
+const AV_COLORS={syndic:'#8b5cf6',proprietaire:'#3b82f6',coproprietaire:'#3b82f6',conseil:'#06b6d4',locataire:'#10b981'};
+let currentUser=null,userData={};
+
+auth.onAuthStateChanged(async user=>{
+  if(!user){window.location.href='login.html';return;}
+  currentUser=user;
+  try{const s=await db.collection('users').doc(user.uid).get();if(s.exists)userData=s.data();}catch(e){}
+  const profile=userData.profile||'locataire';
+  const firstName=userData.prenom||user.displayName?.split(' ')[0]||'Utilisateur';
+  const lastName=userData.nom||user.displayName?.split(' ').slice(1).join(' ')||'';
+  const fullName=`${firstName} ${lastName}`.trim();
+  buildSidebar(profile, fullName, user.email, 'dashboard.html');
+  document.getElementById('ls').style.display='none';
+  document.getElementById('app').style.display='flex';
+  document.getElementById('sidebar').style.display='flex';
+  if(profile==='syndic') await buildSyndic(firstName);
+  else if(profile==='proprietaire'||profile==='coproprietaire') await buildCopro(firstName);
+  else if(profile==='conseil') await buildConseil(firstName);
+  else await buildLocataire(firstName);
+});
+
+async function buildSyndic(name){
+  const[lotsS,usersS,incS,bauxS,depS,chargesS]=await Promise.all([
+    db.collection('lots').get(),db.collection('users').get(),
+    db.collection('incidents').where('statut','in',['signale','assigne','en_cours']).get(),
+    db.collection('baux').where('statut','==','actif').get(),
+    db.collection('depenses').get(),db.collection('charges').get()
+  ]);
+  const lots=lotsS.docs.map(d=>d.data()),users=usersS.docs.map(d=>d.data());
+  const baux=bauxS.docs.map(d=>d.data()),depenses=depS.docs.map(d=>d.data());
+  const charges=chargesS.docs.map(d=>d.data());
+  const totalDep=depenses.reduce((s,d)=>s+(d.montant||0),0);
+  const loyers=baux.reduce((s,b)=>s+(b.loyer||0),0);
+  const locataires=users.filter(u=>u.profile==='locataire').length;
+  const batiments=new Set(lots.map(l=>l.batiment).filter(Boolean)).size;
+  const pct=Math.round(totalDep/250000*100);
+  const totalC=charges.reduce((s,c)=>s+(c.montant||0),0);
+  const totalP=charges.reduce((s,c)=>s+(c.statut==='paye'?c.montant:c.montantPaye||0),0);
+  const tauxRec=totalC?Math.round(totalP/totalC*100):92;
+  document.getElementById('dashContent').innerHTML=`
+    <div class="page-header"><div><div class="page-title">Tableau de bord Syndic</div><div class="page-breadcrumb">Accueil › Dashboard</div></div></div>
+    ${abox('info','👋','Bienvenue '+name,'Vue complète de la gestion de la copropriété')}
+    <div class="stats-row">
+      ${sc('🏢','Lots',lots.length,batiments+' bâtiment(s)','var(--accent)')}
+      ${sc('👥','Résidents',users.length,locataires+' locataires','var(--purple)')}
+      ${sc('💰','Recouvrement',tauxRec+'%','+3% vs 2024','var(--green)')}
+      ${sc('🔧','Incidents ouverts',incS.size,'','var(--red)')}
+    </div>
+    <div class="grid2">
+      <div class="card"><div class="card-header"><span class="card-title">Budget ${new Date().getFullYear()}</span></div><div class="card-body">
+        <div class="prog-bar-wrap"><div class="prog-bar-top"><span>Exécuté</span><span style="font-family:var(--mono)">${totalDep.toLocaleString('fr-FR')} € / 250 000 €</span></div>
+        <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:linear-gradient(90deg,var(--accent),var(--purple))"></div></div></div>
+        <a href="finances.html"><button class="btn btn-primary" style="width:100%">Voir finances →</button></a>
+      </div></div>
+      <div class="card"><div class="card-header"><span class="card-title">Baux actifs</span></div><div class="card-body">
+        ${ir('Baux actifs',baux.length+' baux')}
+        ${ir('Loyers / mois','<span style="color:var(--yellow);font-family:var(--mono)">'+loyers.toLocaleString('fr-FR')+' €</span>')}
+        <div style="margin-top:12px"><a href="baux.html"><button class="btn btn-success" style="width:100%">Gérer les baux →</button></a></div>
+      </div></div>
+    </div>`;
+}
+
+async function buildCopro(name){
+  const[bauxS,incS,votesS]=await Promise.all([
+    db.collection('baux').get(),
+    db.collection('incidents').get(),
+    db.collection('votes').get()
+  ]);
+  const allBaux=bauxS.docs.map(d=>d.data());
+  const chargesS=await db.collection('charges').get();
+  const charges=chargesS.docs.map(d=>d.data());
+  const solde=charges.filter(c=>c.statut!=='paye').reduce((s,c)=>s+(c.montant-(c.montantPaye||0)),0);
+  const votesOuverts=votesS.docs.filter(d=>new Date(d.data().dateCloture)>new Date()).length;
+  const lotsS=await db.collection('lots').get();
+  const lots=lotsS.docs.map(d=>d.data()).filter(l=>l.proprio===`${userData.prenom||''} ${userData.nom||''}`.trim());
+  const tantieme=lots.reduce((s,l)=>s+(l.tantieme||0),0)||userData.tantiemes||0;
+  const loues=lots.filter(l=>l.locataire).length;
+  document.getElementById('dashContent').innerHTML=`
+    <div class="page-header"><div><div class="page-title">Tableau de bord</div><div class="page-breadcrumb">Accueil › Dashboard</div></div></div>
+    ${solde>0?abox('warning','⚠️','Solde à régulariser',solde.toLocaleString('fr-FR')+' € de charges en attente'):abox('info','🏠','Bienvenue '+name,'Votre espace copropriétaire')}
+    <div class="stats-row">
+      ${sc('🏠','Mes lots',lots.length||'—','','var(--accent)')}
+      ${sc('💸','Solde',solde>0?solde.toFixed(2)+' €':'À jour',solde>0?'à payer':'✓ Aucun impayé',solde>0?'var(--red)':'var(--green)')}
+      ${sc('📊','Tantièmes',tantieme||'—','','var(--purple)')}
+      ${sc('🔑','Lots loués',loues,'','var(--green)')}
+    </div>
+    <div class="grid2">
+      <div class="card"><div class="card-header"><span class="card-title">Actions rapides</span></div><div class="card-body">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <a href="finances.html"><button class="btn btn-ghost">💰 Mon compte</button></a>
+          <a href="lots.html"><button class="btn btn-ghost">🏠 Mes lots</button></a>
+          <a href="vote.html"><button class="btn btn-ghost">🗳️ Prochaine AG${votesOuverts>0?' ('+votesOuverts+' vote(s))':''}</button></a>
+          <a href="incidents.html"><button class="btn btn-ghost">🔧 Signaler incident</button></a>
+        </div>
+      </div></div>
+      <div class="card"><div class="card-header"><span class="card-title">Prochaine AG</span></div><div class="card-body">
+        ${ir('Votes ouverts',votesOuverts+' résolution(s)')}
+        ${ir('Votre participation',votesOuverts>0?'<span style="color:var(--yellow)">En attente</span>':'<span style="color:var(--green)">À jour</span>')}
+        <div style="margin-top:12px"><a href="vote.html"><button class="btn btn-success" style="width:100%">Voir les votes →</button></a></div>
+      </div></div>
+    </div>`;
+}
+
+async function buildConseil(name){
+  const[chargesS,depS,incS]=await Promise.all([
+    db.collection('charges').get(),db.collection('depenses').get(),
+    db.collection('incidents').where('statut','in',['signale','assigne','en_cours']).get()
+  ]);
+  const charges=chargesS.docs.map(d=>d.data()),depenses=depS.docs.map(d=>d.data());
+  const totalC=charges.reduce((s,c)=>s+(c.montant||0),0);
+  const totalP=charges.reduce((s,c)=>s+(c.statut==='paye'?c.montant:c.montantPaye||0),0);
+  const tauxRec=totalC?Math.round(totalP/totalC*100):0;
+  const totalDep=depenses.reduce((s,d)=>s+(d.montant||0),0);
+  const pct=Math.round(totalDep/250000*100);
+  const grosses=depenses.filter(d=>(d.montant||0)>2000);
+  document.getElementById('dashContent').innerHTML=`
+    <div class="page-header"><div><div class="page-title">Tableau de bord Conseil Syndical</div><div class="page-breadcrumb">Accueil › Dashboard</div></div></div>
+    ${abox('info','⚖️','Mission de contrôle','Vue de contrôle et supervision')}
+    <div class="stats-row">
+      ${sc('💰','Recouvrement',tauxRec+'%','','var(--green)')}
+      ${sc('📊','Budget exécuté',pct+'%',Math.round(totalDep/1000)+'k/250k €','var(--accent)')}
+      ${sc('⚠️','Dépenses >2000€',grosses.length,'à valider','var(--yellow)')}
+      ${sc('🔧','Incidents ouverts',incS.size,'','var(--red)')}
+    </div>
+    <div class="card"><div class="card-header"><span class="card-title">Dépenses à valider</span></div><div class="card-body">
+      ${grosses.length===0?'<div style="text-align:center;padding:1.5rem;color:var(--text-muted)">✅ Aucune dépense importante en attente</div>':
+      `<div class="table-wrap"><table><thead><tr><th>Description</th><th>Fournisseur</th><th>Montant</th><th>Date</th><th>Actions</th></tr></thead><tbody>
+      ${grosses.map(d=>`<tr><td><strong>${d.description}</strong></td><td style="color:var(--text-sub)">${d.fournisseur||'—'}</td><td style="color:var(--yellow);font-family:var(--mono);font-weight:700">${(d.montant||0).toLocaleString('fr-FR')} €</td><td style="color:var(--text-muted);font-size:12px">${d.date||'—'}</td><td><div style="display:flex;gap:6px"><button class="btn btn-success btn-sm" onclick="showToast('✅ Validé !')">✓</button><button class="btn btn-danger btn-sm" onclick="showToast('❌ Rejeté !')">✗</button></div></td></tr>`).join('')}
+      </tbody></table></div>`}
+    </div></div>`;
+}
+
+async function buildLocataire(name){
+  const uid=currentUser.uid;
+  const fullName=`${userData.prenom||''} ${userData.nom||''}`.trim();
+
+  // Chercher le bail de plusieurs façons
+  const[bauxTousS,incS]=await Promise.all([
+    db.collection('baux').get(),
+    db.collection('incidents').where('createdBy','==',uid).get()
+  ]);
+
+  const tousBaux=bauxTousS.docs.map(d=>({id:d.id,...d.data()}));
+  // Cherche par nom, par lot du profil, ou par uid
+  const baux=tousBaux.filter(b=>
+    (fullName && b.locataire && b.locataire.toLowerCase()===fullName.toLowerCase()) ||
+    (userData.lot && b.lot && b.lot===userData.lot) ||
+    b.locataireUid===uid
+  );
+  const bail=baux.find(b=>b.statut==='actif')||baux[0];
+  const incidents=incS.docs.map(d=>d.data());
+  const resolus=incidents.filter(i=>['resolu','termine'].includes(i.statut)).length;
+  document.getElementById('dashContent').innerHTML=`
+    <div class="page-header"><div><div class="page-title">Tableau de bord Locataire</div><div class="page-breadcrumb">Accueil › Dashboard</div></div></div>
+    ${abox('info','🔑','Bienvenue '+name+' !','Espace locataire — Accès simplifié')}
+    <div class="stats-row">
+      ${sc('🏠','Mon logement',bail?.lot||userData.lot||'—','','var(--accent)')}
+      ${sc('💶','Loyer mensuel',bail?(bail.loyer||0).toLocaleString('fr-FR')+' €':'—',bail?'+'+(bail.charges||0)+' € charges':'','var(--green)')}
+      ${sc('🔧','Mes incidents',incidents.length,resolus+' résolu(s)','var(--yellow)')}
+      ${sc('📅','Fin de bail',bail?.dateFin||'—','','var(--purple)')}
+    </div>
+    <div class="card"><div class="card-header"><span class="card-title">Actions rapides</span></div><div class="card-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <a href="lots.html"><button class="btn btn-ghost">🏠 Mon logement</button></a>
+        <a href="incidents.html"><button class="btn btn-ghost">🔧 Signaler un problème</button></a>
+        <a href="documents.html"><button class="btn btn-ghost">📄 Mes documents</button></a>
+        <a href="annonces.html"><button class="btn btn-ghost">📢 Annonces</button></a>
+      </div>
+    </div></div>`;
+}
+
+function abox(type,icon,title,desc=''){
+  const s={info:{bg:'rgba(6,182,212,.08)',bd:'rgba(6,182,212,.25)',c:'var(--cyan)'},warning:{bg:'var(--yellow-bg)',bd:'rgba(245,158,11,.25)',c:'var(--yellow)'},success:{bg:'var(--green-bg)',bd:'rgba(16,185,129,.25)',c:'var(--green)'},danger:{bg:'var(--red-bg)',bd:'rgba(239,68,68,.25)',c:'var(--red)'}}[type]||{bg:'rgba(6,182,212,.08)',bd:'rgba(6,182,212,.25)',c:'var(--cyan)'};
+  return `<div class="alert-box" style="background:${s.bg};border:1px solid ${s.bd}"><span class="alert-icon">${icon}</span><div><div class="alert-title" style="color:${s.c}">${title}</div>${desc?`<div class="alert-desc">${desc}</div>`:''}</div></div>`;
+}
+function sc(icon,label,value,sub='',color='var(--accent)'){
+  return `<div class="stat-card" style="border-left-color:${color}"><div class="stat-icon">${icon}</div><div class="stat-label">${label}</div><div class="stat-value">${value}</div>${sub?`<div class="stat-sub">${sub}</div>`:''}</div>`;
+}
+function ir(label,value){return `<div class="info-row"><span class="info-label">${label}</span><span class="info-value">${value}</span></div>`;}
+function showToast(msg,color){const t=document.getElementById('toast');t.textContent=msg;t.style.background=color||'var(--green)';t.style.display='block';setTimeout(()=>t.style.display='none',3000);}
+async function handleLogout(){await auth.signOut();window.location.href='login.html';}
+</script>
+</body>
+</html>

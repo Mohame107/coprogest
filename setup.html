@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoproGest — Configuration initiale</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+:root{--navy:#0a0f1e;--card:#141d30;--card2:#1a2540;--border:rgba(99,130,255,.15);--accent:#5b7fff;--accent2:#7c5cfc;--accent3:#38d9a9;--text:#e8eaf6;--muted:#8892b0;--danger:#ff6b6b;--gold:#ffd166;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:radial-gradient(ellipse 60% 50% at 50% 0%,rgba(91,127,255,.18) 0%,transparent 60%),var(--navy);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;}
+
+/* CARD */
+.card{width:100%;max-width:520px;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:2.5rem;animation:fadeUp .5s ease both;}
+
+/* ÉTAPES */
+.steps{display:flex;align-items:center;margin-bottom:2rem;}
+.step{flex:1;text-align:center;}
+.step-dot{width:32px;height:32px;border-radius:50%;margin:0 auto .35rem;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;border:2px solid var(--border);background:var(--card2);color:var(--muted);transition:all .3s;}
+.step.active .step-dot{border-color:var(--accent);background:rgba(91,127,255,.15);color:var(--accent);}
+.step.done .step-dot{border-color:var(--accent3);background:rgba(56,217,169,.15);color:var(--accent3);}
+.step-lbl{font-size:.7rem;color:var(--muted);}
+.step.active .step-lbl{color:var(--accent);}
+.step.done .step-lbl{color:var(--accent3);}
+.step-line{flex:1;height:2px;background:var(--border);margin-bottom:20px;transition:background .3s;}
+.step-line.done{background:var(--accent3);}
+
+/* HEADER */
+.header{text-align:center;margin-bottom:2rem;}
+.header-icon{width:72px;height:72px;border-radius:20px;margin:0 auto 1rem;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:2.2rem;box-shadow:0 8px 32px rgba(91,127,255,.4);}
+.header h1{font-family:'Syne',sans-serif;font-weight:800;font-size:1.5rem;margin-bottom:.3rem;}
+.header p{color:var(--muted);font-size:.88rem;line-height:1.6;}
+
+/* BADGE */
+.setup-badge{display:inline-flex;align-items:center;gap:.5rem;padding:.4rem 1rem;border-radius:99px;background:rgba(56,217,169,.1);border:1px solid rgba(56,217,169,.3);color:var(--accent3);font-size:.78rem;font-weight:500;margin-bottom:1.2rem;}
+
+/* INFO BOX */
+.info-box{background:rgba(91,127,255,.08);border:1px solid rgba(91,127,255,.2);border-radius:10px;padding:1rem;font-size:.84rem;color:var(--muted);line-height:1.7;margin-bottom:1.5rem;}
+.info-box strong{color:var(--accent);}
+.info-box ul{margin:.5rem 0 0 1rem;}
+.info-box li{margin-bottom:.25rem;}
+
+/* FORM */
+.section{display:none;}
+.section.visible{display:flex;flex-direction:column;gap:1rem;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.fg{display:flex;flex-direction:column;gap:.35rem;}
+.flbl{font-size:.76rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);}
+.fw{position:relative;}
+.fi{position:absolute;left:.9rem;top:50%;transform:translateY(-50%);font-size:.95rem;pointer-events:none;}
+.fw input{width:100%;padding:.8rem 1rem .8rem 2.5rem;background:var(--card2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.9rem;transition:border-color .2s;}
+.fw input:focus{outline:none;border-color:var(--accent);}
+.fw input::placeholder{color:var(--muted);}
+.fw input.err{border-color:var(--danger);}
+.eye{position:absolute;right:.9rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);font-size:.9rem;}
+.eye:hover{color:var(--text);}
+.ferr{color:var(--danger);font-size:.74rem;display:none;}
+.ferr.show{display:block;}
+
+/* FORCE MDP */
+.bars{display:flex;gap:4px;margin-top:.4rem;}
+.bar{height:4px;flex:1;border-radius:2px;background:var(--border);transition:background .3s;}
+.bar.w{background:var(--danger);}.bar.m{background:var(--gold);}.bar.s{background:var(--accent3);}
+.bar-lbl{font-size:.72rem;color:var(--muted);margin-top:.25rem;}
+
+/* CGU */
+.cgu{display:flex;align-items:flex-start;gap:.6rem;padding:.75rem;background:var(--card2);border-radius:8px;border:1px solid var(--border);}
+.cgu input{accent-color:var(--accent);margin-top:2px;cursor:pointer;flex-shrink:0;}
+.cgu label{font-size:.82rem;color:var(--muted);cursor:pointer;line-height:1.5;}
+
+/* BOUTONS */
+.nav-btns{display:flex;gap:.75rem;margin-top:.5rem;}
+.btn-next{flex:1;padding:.88rem;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-family:'DM Sans',sans-serif;font-weight:600;font-size:.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.5rem;transition:opacity .2s,transform .15s;box-shadow:0 6px 20px rgba(91,127,255,.35);}
+.btn-next:hover{opacity:.9;transform:translateY(-1px);}
+.btn-next:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.btn-back{padding:.88rem 1.4rem;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-family:'DM Sans',sans-serif;font-weight:500;font-size:.95rem;cursor:pointer;display:none;transition:background .2s;}
+.btn-back.show{display:flex;align-items:center;justify-content:center;}
+.btn-back:hover{background:rgba(255,255,255,.05);}
+
+/* SUCCÈS */
+.success-screen{display:none;text-align:center;padding:1rem 0;}
+.success-screen.visible{display:block;}
+.success-icon{font-size:4rem;margin-bottom:1rem;animation:bounce .6s ease both;}
+.success-screen h2{font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;margin-bottom:.5rem;}
+.success-screen p{color:var(--muted);font-size:.9rem;line-height:1.7;margin-bottom:1.5rem;}
+.btn-go{width:100%;padding:.88rem;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-family:'DM Sans',sans-serif;font-weight:600;font-size:1rem;cursor:pointer;transition:opacity .2s;box-shadow:0 6px 20px rgba(91,127,255,.35);}
+.btn-go:hover{opacity:.9;}
+
+/* BLOQUÉ */
+.blocked-screen{display:none;text-align:center;padding:2rem 0;}
+.blocked-screen.visible{display:block;}
+
+/* LOADING */
+.loading-screen{position:fixed;inset:0;background:var(--navy);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:1rem;}
+.spinner{width:44px;height:44px;border:3px solid rgba(91,127,255,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+.spinner-text{color:var(--muted);font-size:.9rem;}
+
+/* TOAST */
+.toast{position:fixed;bottom:2rem;right:2rem;z-index:1000;background:var(--card2);border:1px solid var(--border);border-left:4px solid var(--accent3);border-radius:12px;padding:1rem 1.4rem;font-size:.88rem;color:var(--text);box-shadow:0 10px 40px rgba(0,0,0,.4);transform:translateX(130%);transition:transform .35s cubic-bezier(.22,1,.36,1);max-width:320px;}
+.toast.show{transform:translateX(0);}
+.toast.error{border-left-color:var(--danger);}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes bounce{0%{transform:scale(0);}60%{transform:scale(1.2);}100%{transform:scale(1);}}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-screen" id="ls"><div class="spinner"></div><div class="spinner-text">Vérification du système…</div></div>
+
+<div class="card" id="mainCard" style="display:none">
+
+  <!-- Écran bloqué (Syndic déjà existant) -->
+  <div class="blocked-screen" id="blockedScreen">
+    <div style="font-size:3rem;margin-bottom:1rem">🔒</div>
+    <h2 style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.3rem;margin-bottom:.5rem">Configuration déjà effectuée</h2>
+    <p style="color:var(--muted);font-size:.9rem;line-height:1.7;margin-bottom:1.5rem">Un compte Syndic existe déjà.<br>Cette page n'est plus accessible.</p>
+    <a href="login.html"><button class="btn-go">← Aller à la connexion</button></a>
+  </div>
+
+  <!-- Formulaire de configuration -->
+  <div id="setupForm" style="display:none">
+
+    <!-- Badge -->
+    <div style="text-align:center;margin-bottom:1.5rem">
+      <span class="setup-badge">⚙️ Configuration initiale — Première utilisation</span>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+      <div class="header-icon">🏢</div>
+      <h1>Bienvenue sur CoproGest</h1>
+      <p>Créez le compte <strong style="color:var(--accent)">Syndic fondateur</strong> pour commencer à gérer votre copropriété.</p>
+    </div>
+
+    <!-- Stepper -->
+    <div class="steps">
+      <div class="step active" id="s1"><div class="step-dot">1</div><div class="step-lbl">Identité</div></div>
+      <div class="step-line" id="l1"></div>
+      <div class="step" id="s2"><div class="step-dot">2</div><div class="step-lbl">Copropriété</div></div>
+      <div class="step-line" id="l2"></div>
+      <div class="step" id="s3"><div class="step-dot">3</div><div class="step-lbl">Sécurité</div></div>
+    </div>
+
+    <!-- ÉTAPE 1 : Identité -->
+    <div class="section visible" id="sec1">
+      <div class="info-box">
+        <strong>ℹ️ Cette page est unique :</strong> elle ne s'affiche qu'une seule fois. Une fois le Syndic créé, elle sera désactivée automatiquement.
+      </div>
+      <div class="form-row">
+        <div class="fg">
+          <label class="flbl">Prénom *</label>
+          <div class="fw"><span class="fi">👤</span><input type="text" id="prenom" placeholder="Jean"></div>
+          <span class="ferr" id="e-prenom">Champ requis</span>
+        </div>
+        <div class="fg">
+          <label class="flbl">Nom *</label>
+          <div class="fw"><span class="fi">👤</span><input type="text" id="nom" placeholder="Dupont"></div>
+          <span class="ferr" id="e-nom">Champ requis</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="flbl">Adresse e-mail *</label>
+        <div class="fw"><span class="fi">✉️</span><input type="email" id="email" placeholder="syndic@coprogest.fr"></div>
+        <span class="ferr" id="e-email">Email invalide</span>
+      </div>
+      <div class="fg">
+        <label class="flbl">Téléphone</label>
+        <div class="fw"><span class="fi">📱</span><input type="tel" id="tel" placeholder="+253 77 XX XX XX"></div>
+      </div>
+    </div>
+
+    <!-- ÉTAPE 2 : Copropriété -->
+    <div class="section" id="sec2">
+      <div class="fg">
+        <label class="flbl">Nom de la copropriété *</label>
+        <div class="fw"><span class="fi">🏢</span><input type="text" id="copro" placeholder="Résidence Les Jardins"></div>
+        <span class="ferr" id="e-copro">Champ requis</span>
+      </div>
+      <div class="fg">
+        <label class="flbl">Adresse</label>
+        <div class="fw"><span class="fi">📍</span><input type="text" id="adresse" placeholder="12 rue de la Paix, Djibouti"></div>
+      </div>
+      <div class="form-row">
+        <div class="fg">
+          <label class="flbl">Nombre de lots</label>
+          <div class="fw"><span class="fi">🔢</span><input type="number" id="nbLots" placeholder="48" min="1"></div>
+        </div>
+        <div class="fg">
+          <label class="flbl">Nombre de bâtiments</label>
+          <div class="fw"><span class="fi">🏗️</span><input type="number" id="nbBat" placeholder="3" min="1"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ÉTAPE 3 : Sécurité -->
+    <div class="section" id="sec3">
+      <div class="fg">
+        <label class="flbl">Mot de passe *</label>
+        <div class="fw">
+          <span class="fi">🔒</span>
+          <input type="password" id="pwd" placeholder="••••••••" oninput="checkStr()">
+          <button class="eye" onclick="toggleEye('pwd','eye1')" id="eye1">👁️</button>
+        </div>
+        <div class="bars"><div class="bar" id="b1"></div><div class="bar" id="b2"></div><div class="bar" id="b3"></div><div class="bar" id="b4"></div></div>
+        <div class="bar-lbl" id="strLbl">Entrez un mot de passe</div>
+        <span class="ferr" id="e-pwd">Minimum 8 caractères</span>
+      </div>
+      <div class="fg">
+        <label class="flbl">Confirmer le mot de passe *</label>
+        <div class="fw">
+          <span class="fi">🔒</span>
+          <input type="password" id="pwd2" placeholder="••••••••">
+          <button class="eye" onclick="toggleEye('pwd2','eye2')" id="eye2">👁️</button>
+        </div>
+        <span class="ferr" id="e-pwd2">Les mots de passe ne correspondent pas</span>
+      </div>
+      <div class="cgu">
+        <input type="checkbox" id="cgu">
+        <label for="cgu">Je confirme être le <strong>Syndic fondateur</strong> de cette copropriété et accepte les <a href="#" style="color:var(--accent)">conditions d'utilisation</a>.</label>
+      </div>
+      <span class="ferr" id="e-cgu">Veuillez confirmer votre rôle</span>
+    </div>
+
+    <div class="nav-btns">
+      <button class="btn-back" id="btnBack" onclick="prev()">← Retour</button>
+      <button class="btn-next" id="btnNext" onclick="next()">Continuer →</button>
+    </div>
+  </div>
+
+  <!-- Écran succès -->
+  <div class="success-screen" id="successScreen">
+    <div class="success-icon">🎉</div>
+    <h2>CoproGest est prêt !</h2>
+    <p>Votre compte Syndic a été créé avec succès.<br>Vous pouvez maintenant vous connecter et commencer à gérer votre copropriété.</p>
+    <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1.5rem;text-align:left;">
+      <div style="font-size:.78rem;color:var(--muted);margin-bottom:.5rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase">Récapitulatif</div>
+      <div id="recap" style="font-size:.88rem;display:flex;flex-direction:column;gap:.3rem;color:var(--muted)"></div>
+    </div>
+    <button class="btn-go" onclick="window.location.href='login.html'">🔐 Se connecter maintenant</button>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="firebase-config.js"></script>
+<script>
+let step = 1;
+
+// ── Vérification au chargement ──
+// Si un Syndic existe déjà → bloquer la page
+window.addEventListener('load', async () => {
+  try {
+    const snap = await db.collection('config').doc('setup').get();
+    document.getElementById('ls').style.display = 'none';
+    document.getElementById('mainCard').style.display = 'block';
+
+    if (snap.exists && snap.data().setupDone === true) {
+      // Syndic déjà créé → page bloquée
+      document.getElementById('blockedScreen').classList.add('visible');
+    } else {
+      // Première fois → afficher le formulaire
+      document.getElementById('setupForm').style.display = 'block';
+    }
+  } catch(e) {
+    document.getElementById('ls').style.display = 'none';
+    document.getElementById('mainCard').style.display = 'block';
+    document.getElementById('setupForm').style.display = 'block';
+  }
+});
+
+// ── Navigation étapes ──
+function showStep(n) {
+  [1,2,3].forEach(i => {
+    document.getElementById('sec'+i).className = 'section' + (i===n?' visible':'');
+    document.getElementById('s'+i).className = 'step' + (i<n?' done':i===n?' active':'');
+  });
+  [1,2].forEach(i => document.getElementById('l'+i).className = 'step-line'+(i<n?' done':''));
+  const back = document.getElementById('btnBack');
+  back.classList.toggle('show', n > 1);
+  document.getElementById('btnNext').textContent = n===3 ? '✅ Créer le compte Syndic' : 'Continuer →';
+  step = n;
+}
+
+function setErr(errId, inputId, show) {
+  document.getElementById(errId).classList.toggle('show', show);
+  if (inputId) {
+    const el = document.getElementById(inputId);
+    if (el) el.classList.toggle('err', show);
+  }
+}
+
+function next() {
+  if (step === 1) {
+    let ok = true;
+    if (!document.getElementById('prenom').value.trim()) { setErr('e-prenom','prenom',true); ok=false; } else setErr('e-prenom','prenom',false);
+    if (!document.getElementById('nom').value.trim())    { setErr('e-nom','nom',true);       ok=false; } else setErr('e-nom','nom',false);
+    const em = document.getElementById('email').value.trim();
+    if (!em||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) { setErr('e-email','email',true); ok=false; } else setErr('e-email','email',false);
+    if (ok) showStep(2);
+  } else if (step === 2) {
+    let ok = true;
+    if (!document.getElementById('copro').value.trim()) { setErr('e-copro','copro',true); ok=false; } else setErr('e-copro','copro',false);
+    if (ok) showStep(3);
+  } else if (step === 3) {
+    let ok = true;
+    const p1 = document.getElementById('pwd').value;
+    const p2 = document.getElementById('pwd2').value;
+    const cgu = document.getElementById('cgu').checked;
+    if (p1.length < 8)   { setErr('e-pwd','pwd',true);   ok=false; } else setErr('e-pwd','pwd',false);
+    if (p1 !== p2 || !p2){ setErr('e-pwd2','pwd2',true);  ok=false; } else setErr('e-pwd2','pwd2',false);
+    if (!cgu)            { setErr('e-cgu',null,true);     ok=false; } else setErr('e-cgu',null,false);
+    if (ok) createSyndic();
+  }
+}
+
+function prev() { if (step > 1) showStep(step - 1); }
+
+// ── Créer le Syndic ──
+async function createSyndic() {
+  const prenom  = document.getElementById('prenom').value.trim();
+  const nom     = document.getElementById('nom').value.trim();
+  const email   = document.getElementById('email').value.trim();
+  const tel     = document.getElementById('tel').value.trim();
+  const copro   = document.getElementById('copro').value.trim();
+  const adresse = document.getElementById('adresse').value.trim();
+  const nbLots  = parseInt(document.getElementById('nbLots').value) || 0;
+  const nbBat   = parseInt(document.getElementById('nbBat').value) || 0;
+  const pwd     = document.getElementById('pwd').value;
+
+  const btn = document.getElementById('btnNext');
+  btn.disabled = true; btn.textContent = 'Création en cours…';
+
+  try {
+    // 1. Créer le compte Firebase Auth
+    const cred = await auth.createUserWithEmailAndPassword(email, pwd);
+    await cred.user.updateProfile({ displayName: `${prenom} ${nom}` });
+
+    // 2. Sauvegarder le profil Syndic dans Firestore
+    await db.collection('users').doc(cred.user.uid).set({
+      prenom, nom, email, tel,
+      profile: 'syndic',
+      copro, adresse, nbLots, nbBat,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // 3. Sauvegarder les infos de la copropriété
+    await db.collection('config').doc('copropriete').set({
+      nom: copro, adresse, nbLots, nbBat,
+      syndicId: cred.user.uid,
+      syndicNom: `${prenom} ${nom}`,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // 4. Marquer le setup comme terminé ← désactive la page pour toujours
+    await db.collection('config').doc('setup').set({
+      setupDone: true,
+      completedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      syndicEmail: email
+    });
+
+    // 5. Déconnecter (l'utilisateur devra se connecter normalement)
+    await auth.signOut();
+
+    // 6. Afficher l'écran de succès
+    document.getElementById('setupForm').style.display = 'none';
+    document.getElementById('successScreen').classList.add('visible');
+    document.getElementById('recap').innerHTML = `
+      <span>👤 <strong style="color:var(--text)">${prenom} ${nom}</strong> — Syndic</span>
+      <span>✉️ ${email}</span>
+      <span>🏢 ${copro}</span>
+      ${adresse ? `<span>📍 ${adresse}</span>` : ''}
+      ${nbLots ? `<span>🔢 ${nbLots} lots · ${nbBat} bâtiment(s)</span>` : ''}
+    `;
+
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '✅ Créer le compte Syndic';
+    const msgs = {
+      'auth/email-already-in-use': '⚠️ Cet email est déjà utilisé.',
+      'auth/weak-password':        '⚠️ Mot de passe trop faible.',
+      'auth/invalid-email':        '⚠️ Email invalide.',
+      'auth/network-request-failed': '⚠️ Erreur réseau.',
+    };
+    showToast(msgs[e.code] || '⚠️ Erreur : ' + e.code, true);
+  }
+}
+
+// ── Helpers ──
+function toggleEye(iId, bId) {
+  const i = document.getElementById(iId), b = document.getElementById(bId);
+  i.type = i.type==='password'?'text':'password';
+  b.textContent = i.type==='password'?'👁️':'🙈';
+}
+
+function checkStr() {
+  const v = document.getElementById('pwd').value;
+  let sc = 0;
+  if (v.length>=6) sc++; if (v.length>=10) sc++;
+  if (/[A-Z]/.test(v)&&/[0-9]/.test(v)) sc++;
+  if (/[^A-Za-z0-9]/.test(v)) sc++;
+  const c = sc<=1?'w':sc<=2?'m':'s';
+  [1,2,3,4].forEach((n,i)=>{ document.getElementById('b'+n).className='bar'+(i<sc?' '+c:''); });
+  const t = document.getElementById('strLbl');
+  t.textContent = sc===0?'Entrez un mot de passe':{w:'Faible',m:'Moyen',s:'Fort'}[c];
+  t.style.color = c==='w'?'var(--danger)':c==='m'?'var(--gold)':'var(--accent3)';
+}
+
+let toastTimer;
+function showToast(msg, isErr=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show'+(isErr?' error':'');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 4500);
+}
+</script>
+</body>
+</html>

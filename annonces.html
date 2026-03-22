@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoproGest — Annonces</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+:root{--navy:#0a0f1e;--card:#141d30;--card2:#1a2540;--border:rgba(99,130,255,.15);--accent:#5b7fff;--accent2:#7c5cfc;--accent3:#38d9a9;--text:#e8eaf6;--muted:#8892b0;--danger:#ff6b6b;--gold:#ffd166;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text);min-height:100vh;}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:240px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:1.5rem 0;z-index:50;}
+.sidebar-logo{display:flex;align-items:center;gap:.7rem;padding:0 1.5rem 1.5rem;border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-weight:800;font-size:1.15rem;text-decoration:none;color:var(--text);}
+.sidebar-logo-icon{width:36px;height:36px;border-radius:10px;flex-shrink:0;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:1.1rem;}
+.nav-section-label{font-size:.68rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:.8rem 1.5rem .4rem;margin-top:.5rem;}
+.nav-item{display:flex;align-items:center;gap:.75rem;padding:.7rem 1.5rem;color:var(--muted);font-size:.88rem;transition:all .2s;border-left:2px solid transparent;text-decoration:none;}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.03);}
+.nav-item.active{color:var(--text);background:rgba(91,127,255,.1);border-left-color:var(--accent);}
+.nav-icon{font-size:1.1rem;width:20px;text-align:center;}
+.sidebar-footer{margin-top:auto;padding:1.5rem;border-top:1px solid var(--border);}
+.user-info{display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem;}
+.user-avatar{width:36px;height:36px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:700;}
+.user-details strong{display:block;font-size:.85rem;font-weight:600;}
+.user-details small{color:var(--muted);font-size:.72rem;}
+.btn-logout{width:100%;padding:.6rem;border-radius:8px;border:1px solid rgba(255,107,107,.3);background:rgba(255,107,107,.08);color:#ff9999;font-family:'DM Sans',sans-serif;font-size:.83rem;cursor:pointer;transition:background .2s;display:flex;align-items:center;justify-content:center;gap:.5rem;}
+.btn-logout:hover{background:rgba(255,107,107,.15);}
+.main{margin-left:240px;padding:2rem 2.5rem;}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem;}
+.page-header h1{font-family:'Syne',sans-serif;font-weight:800;font-size:1.6rem;}
+.page-header p{color:var(--muted);font-size:.92rem;margin-top:.3rem;}
+.btn-create{display:none;align-items:center;gap:.6rem;padding:.75rem 1.4rem;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-family:'DM Sans',sans-serif;font-weight:600;font-size:.92rem;cursor:pointer;transition:opacity .2s,transform .15s;box-shadow:0 4px 16px rgba(91,127,255,.35);}
+.btn-create:hover{opacity:.9;transform:translateY(-1px);}
+.btn-create.visible{display:flex;}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:2rem;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.2rem;transition:transform .2s;}
+.stat-card:hover{transform:translateY(-2px);}
+.stat-val{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;}
+.stat-lbl{color:var(--muted);font-size:.78rem;margin-top:.2rem;}
+/* TABS */
+.tabs{display:flex;gap:.5rem;margin-bottom:1.5rem;background:var(--card);padding:.4rem;border-radius:10px;width:fit-content;}
+.tab-btn{padding:.55rem 1.2rem;border-radius:7px;border:none;background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:500;cursor:pointer;transition:all .15s;}
+.tab-btn.active{background:var(--accent);color:#fff;font-weight:600;}
+/* SEARCH */
+.search-wrap{position:relative;margin-bottom:1.5rem;}
+.search-icon{position:absolute;left:.9rem;top:50%;transform:translateY(-50%);font-size:.95rem;pointer-events:none;}
+.search-input{width:100%;padding:.7rem 1rem .7rem 2.5rem;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.88rem;transition:border-color .2s;}
+.search-input:focus{outline:none;border-color:var(--accent);}
+.search-input::placeholder{color:var(--muted);}
+/* ANNONCE CARDS */
+.annonce-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.5rem;margin-bottom:1.25rem;animation:fadeUp .35s ease both;transition:border-color .2s;}
+.annonce-card:hover{border-color:rgba(91,127,255,.25);}
+.annonce-card.type-info{border-left:4px solid #06b6d4;}
+.annonce-card.type-warning{border-left:4px solid var(--gold);}
+.annonce-card.type-success{border-left:4px solid var(--accent3);}
+.annonce-card.type-danger{border-left:4px solid var(--danger);}
+.annonce-card.archived{opacity:.6;}
+.annonce-top{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.75rem;margin-bottom:.75rem;}
+.annonce-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1.05rem;line-height:1.4;}
+.badges{display:flex;flex-wrap:wrap;gap:.4rem;}
+.badge{display:inline-flex;align-items:center;gap:.3rem;padding:.22rem .65rem;border-radius:6px;font-size:.72rem;font-weight:600;}
+.badge-info{background:rgba(6,182,212,.12);color:#06b6d4;}
+.badge-warning{background:rgba(255,209,102,.12);color:var(--gold);}
+.badge-success{background:rgba(56,217,169,.12);color:var(--accent3);}
+.badge-danger{background:rgba(255,107,107,.12);color:var(--danger);}
+.badge-muted{background:rgba(136,146,176,.1);color:var(--muted);}
+.annonce-meta{font-size:.78rem;color:var(--muted);margin-bottom:.75rem;}
+.annonce-body{font-size:.9rem;color:var(--muted);line-height:1.7;margin-bottom:1rem;}
+.annonce-actions{display:flex;gap:.5rem;flex-wrap:wrap;}
+.btn-sm{padding:.42rem .9rem;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.78rem;cursor:pointer;transition:all .2s;}
+.btn-sm:hover{border-color:var(--accent);color:var(--accent);}
+.btn-sm.danger:hover{border-color:var(--danger);color:var(--danger);}
+.btn-sm.success:hover{border-color:var(--accent3);color:var(--accent3);}
+/* EMPTY */
+.empty-state{text-align:center;padding:4rem 2rem;color:var(--muted);}
+.empty-icon{font-size:3rem;margin-bottom:1rem;opacity:.4;}
+.empty-state h3{font-family:'Syne',sans-serif;font-size:1.1rem;color:var(--text);margin-bottom:.5rem;}
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;padding:1rem;}
+.modal-overlay.show{opacity:1;pointer-events:all;}
+.modal-box{background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:2rem;max-width:520px;width:100%;max-height:90vh;overflow-y:auto;transform:translateY(20px);transition:transform .25s;}
+.modal-overlay.show .modal-box{transform:translateY(0);}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;}
+.modal-header h2{font-family:'Syne',sans-serif;font-weight:800;font-size:1.15rem;}
+.modal-close{background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;}
+.modal-close:hover{color:var(--text);}
+.form-group{display:flex;flex-direction:column;gap:.4rem;margin-bottom:1rem;}
+.form-label{font-size:.75rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);}
+.form-input,.form-textarea,.form-select{width:100%;padding:.8rem 1rem;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.9rem;transition:border-color .2s;}
+.form-input:focus,.form-textarea:focus,.form-select:focus{outline:none;border-color:var(--accent);}
+.form-input::placeholder,.form-textarea::placeholder{color:var(--muted);}
+.form-textarea{resize:vertical;min-height:100px;}
+.form-select option{background:var(--card2);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.ferr{color:var(--danger);font-size:.74rem;display:none;}
+.ferr.show{display:block;}
+.btn-submit{width:100%;padding:.88rem;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-family:'DM Sans',sans-serif;font-weight:600;font-size:1rem;cursor:pointer;margin-top:.5rem;transition:opacity .2s;}
+.btn-submit:hover{opacity:.9;}
+.btn-submit:disabled{opacity:.5;cursor:not-allowed;}
+/* LOADING + TOAST */
+.loading-screen{position:fixed;inset:0;background:var(--navy);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:1rem;}
+.loading-spinner{width:44px;height:44px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+.loading-text{color:var(--muted);font-size:.9rem;}
+.toast{position:fixed;bottom:2rem;right:2rem;z-index:1000;background:var(--card2);border:1px solid var(--border);border-left:4px solid var(--accent3);border-radius:12px;padding:1rem 1.4rem;font-size:.88rem;color:var(--text);box-shadow:0 10px 40px rgba(0,0,0,.4);transform:translateX(120%);transition:transform .35s cubic-bezier(.22,1,.36,1);max-width:320px;}
+.toast.show{transform:translateX(0);}
+.toast.error{border-left-color:var(--danger);}
+@media(max-width:900px){.sidebar{display:none;}.main{margin-left:0;padding:1.5rem;}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+@keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+<div class="loading-screen" id="ls"><div class="loading-spinner"></div><div class="loading-text">Chargement...</div></div>
+
+<aside class="sidebar" id="sidebar" style="display:none"></aside>
+
+<main class="main" id="mainContent" style="display:none">
+  <div class="page-header">
+    <div>
+      <h1>📢 Annonces</h1>
+      <p>Informations et actualités de la copropriété</p>
+    </div>
+    <button class="btn-create" id="btnCreate" onclick="openModal()">+ Nouvelle annonce</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat-card"><div class="stat-val" id="stTotal">0</div><div class="stat-lbl">Total annonces</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--accent3)" id="stActives">0</div><div class="stat-lbl">Actives</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--danger)" id="stUrgent">0</div><div class="stat-lbl">Urgentes</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--muted)" id="stArchives">0</div><div class="stat-lbl">Archivées</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="setTab('actives',this)">📢 Actives</button>
+    <button class="tab-btn" onclick="setTab('archivees',this)">📦 Archivées</button>
+  </div>
+
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" class="search-input" id="searchInput" placeholder="Rechercher une annonce..." oninput="renderAnnonces()">
+  </div>
+
+  <div id="annoncesContainer"></div>
+</main>
+
+<!-- MODAL CRÉER/MODIFIER -->
+<div class="modal-overlay" id="annonceModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 id="modalTitle">📢 Nouvelle annonce</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <input type="hidden" id="edit-id">
+    <div class="form-group">
+      <label class="form-label">Titre *</label>
+      <input type="text" class="form-input" id="a-titre" placeholder="Objet de l'annonce">
+      <span class="ferr" id="e-titre">Champ requis</span>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Message *</label>
+      <textarea class="form-textarea" id="a-texte" placeholder="Contenu de l'annonce..."></textarea>
+      <span class="ferr" id="e-texte">Champ requis</span>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Type</label>
+        <select class="form-select" id="a-type">
+          <option value="info">ℹ️ Information</option>
+          <option value="warning">⚠️ Avertissement</option>
+          <option value="success">✅ Bonne nouvelle</option>
+          <option value="danger">🚨 Urgent</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Public cible</label>
+        <select class="form-select" id="a-public">
+          <option value="tous">🌐 Tous</option>
+          <option value="proprietaires">🏠 Copropriétaires</option>
+          <option value="locataires">🔑 Locataires</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn-submit" id="btnSubmit" onclick="saveAnnonce()">✅ Publier l'annonce</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="sidebar.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+let currentUser = null;
+let currentProfile = 'locataire';
+let currentUserName = '';
+let allAnnonces = [];
+let currentTab = 'actives';
+
+const TYPE_ICONS   = { info:'ℹ️', warning:'⚠️', success:'✅', danger:'🚨' };
+const TYPE_LABELS  = { info:'Information', warning:'Avertissement', success:'Bonne nouvelle', danger:'Urgent' };
+
+auth.onAuthStateChanged(async user => {
+  if (!user) { window.location.href = 'login.html'; return; }
+  currentUser = user;
+  try {
+    const snap = await db.collection('users').doc(user.uid).get();
+    if (snap.exists) {
+      const d = snap.data();
+      currentProfile  = d.profile || 'locataire';
+      currentUserName = d.prenom ? `${d.prenom} ${d.nom||''}`.trim() : user.displayName || user.email.split('@')[0];
+      buildSidebar(currentProfile||d.profile||'locataire', name, user.email, 'annonces.html');
+    }
+  } catch(e) {}
+
+  if (currentProfile === 'syndic') {
+    document.getElementById('btnCreate').classList.add('visible');  }
+
+  document.getElementById('ls').style.display = 'none';
+  document.getElementById('sidebar').style.display = 'flex';
+  document.getElementById('mainContent').style.display = 'block';
+  loadAnnonces();
+});
+
+function loadAnnonces() {
+  db.collection('annonces').orderBy('createdAt','desc').onSnapshot(snap => {
+    allAnnonces = [];
+    snap.forEach(doc => allAnnonces.push({ id: doc.id, ...doc.data() }));
+    updateStats();
+    renderAnnonces();
+  });
+}
+
+function updateStats() {
+  document.getElementById('stTotal').textContent   = allAnnonces.length;
+  document.getElementById('stActives').textContent = allAnnonces.filter(a => !a.archivee).length;
+  document.getElementById('stUrgent').textContent  = allAnnonces.filter(a => a.type === 'danger' && !a.archivee).length;
+  document.getElementById('stArchives').textContent= allAnnonces.filter(a => a.archivee).length;
+}
+
+function setTab(tab, btn) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAnnonces();
+}
+
+function renderAnnonces() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  let list = allAnnonces;
+  if (currentTab === 'actives')   list = list.filter(a => !a.archivee);
+  if (currentTab === 'archivees') list = list.filter(a => a.archivee);
+  if (q) list = list.filter(a =>
+    (a.titre||'').toLowerCase().includes(q) ||
+    (a.texte||'').toLowerCase().includes(q)
+  );
+
+  const container = document.getElementById('annoncesContainer');
+  const isSyndic  = currentProfile === 'syndic';
+
+  if (list.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">📢</div><h3>Aucune annonce</h3><p>Pas d'annonces à afficher dans cet onglet.</p></div>`;
+    return;
+  }
+
+  container.innerHTML = list.map((a, i) => {
+    const date = a.createdAt?.toDate ? a.createdAt.toDate().toLocaleDateString('fr-FR') : '—';
+    const icon = TYPE_ICONS[a.type] || 'ℹ️';
+    const lbl  = TYPE_LABELS[a.type] || 'Information';
+    const badgeCls = `badge-${a.type||'info'}`;
+    const publicLabel = { tous:'🌐 Tous', proprietaires:'🏠 Copropriétaires', locataires:'🔑 Locataires' }[a.public] || '🌐 Tous';
+
+    const actions = isSyndic ? `
+      <button class="btn-sm" onclick="openEdit('${a.id}')">✏️ Modifier</button>
+      ${!a.archivee
+        ? `<button class="btn-sm danger" onclick="archiveAnnonce('${a.id}')">📦 Archiver</button>`
+        : `<button class="btn-sm success" onclick="restoreAnnonce('${a.id}')">♻️ Restaurer</button>`}
+      <button class="btn-sm danger" onclick="deleteAnnonce('${a.id}')">🗑️ Supprimer</button>` : '';
+
+    return `<div class="annonce-card type-${a.type||'info'} ${a.archivee?'archived':''}" style="animation-delay:${i*0.06}s">
+      <div class="annonce-top">
+        <div class="annonce-title">${icon} ${a.titre}</div>
+        <div class="badges">
+          <span class="badge ${badgeCls}">${lbl}</span>
+          <span class="badge badge-muted">${publicLabel}</span>
+          ${a.archivee ? '<span class="badge badge-muted">📦 Archivée</span>' : ''}
+        </div>
+      </div>
+      <div class="annonce-meta">📅 ${date} · par ${a.auteur||'—'}</div>
+      <div class="annonce-body">${a.texte}</div>
+      ${actions ? `<div class="annonce-actions">${actions}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ── Créer/Modifier ──
+function openModal() {
+  document.getElementById('edit-id').value = '';
+  document.getElementById('modalTitle').textContent = '📢 Nouvelle annonce';
+  document.getElementById('btnSubmit').textContent = '✅ Publier l\'annonce';
+  document.getElementById('a-titre').value = '';
+  document.getElementById('a-texte').value = '';
+  document.getElementById('a-type').value = 'info';
+  document.getElementById('a-public').value = 'tous';
+  document.getElementById('annonceModal').classList.add('show');
+}
+
+function openEdit(id) {
+  const a = allAnnonces.find(x => x.id === id);
+  if (!a) return;
+  document.getElementById('edit-id').value  = id;
+  document.getElementById('modalTitle').textContent = '✏️ Modifier l\'annonce';
+  document.getElementById('btnSubmit').textContent  = '💾 Enregistrer';
+  document.getElementById('a-titre').value  = a.titre  || '';
+  document.getElementById('a-texte').value  = a.texte  || '';
+  document.getElementById('a-type').value   = a.type   || 'info';
+  document.getElementById('a-public').value = a.public || 'tous';
+  document.getElementById('annonceModal').classList.add('show');
+}
+
+async function saveAnnonce() {
+  const titre  = document.getElementById('a-titre').value.trim();
+  const texte  = document.getElementById('a-texte').value.trim();
+  const type   = document.getElementById('a-type').value;
+  const pub    = document.getElementById('a-public').value;
+  const editId = document.getElementById('edit-id').value;
+
+  let ok = true;
+  if (!titre) { document.getElementById('e-titre').classList.add('show'); ok=false; } else document.getElementById('e-titre').classList.remove('show');
+  if (!texte) { document.getElementById('e-texte').classList.add('show'); ok=false; } else document.getElementById('e-texte').classList.remove('show');
+  if (!ok) return;
+
+  const btn = document.getElementById('btnSubmit');
+  btn.disabled = true; btn.textContent = 'Enregistrement...';
+
+  try {
+    if (editId) {
+      await db.collection('annonces').doc(editId).update({ titre, texte, type, public: pub });
+      showToast('✏️ Annonce modifiée !');
+    } else {
+      await db.collection('annonces').add({
+        titre, texte, type, public: pub,
+        auteur: currentUserName,
+        archivee: false,
+        createdBy: currentUser.uid,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      showToast('✅ Annonce publiée !');
+    }
+    closeModal();
+  } catch(e) {
+    showToast('❌ Erreur lors de l\'enregistrement', true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = editId ? '💾 Enregistrer' : '✅ Publier l\'annonce';
+  }
+}
+
+async function archiveAnnonce(id) {
+  await db.collection('annonces').doc(id).update({ archivee: true });
+  showToast('📦 Annonce archivée.');
+}
+async function restoreAnnonce(id) {
+  await db.collection('annonces').doc(id).update({ archivee: false });
+  showToast('♻️ Annonce restaurée.');
+}
+async function deleteAnnonce(id) {
+  if (!confirm('Supprimer cette annonce définitivement ?')) return;
+  await db.collection('annonces').doc(id).delete();
+  showToast('🗑️ Annonce supprimée.');
+}
+
+function closeModal() { document.getElementById('annonceModal').classList.remove('show'); }
+async function handleLogout() { await auth.signOut(); window.location.href = 'login.html'; }
+
+let toastTimer;
+function showToast(msg, isErr=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show' + (isErr?' error':'');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>

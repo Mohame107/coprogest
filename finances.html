@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoproGest — Finances</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+:root{--navy:#0a0f1e;--card:#141d30;--card2:#1a2540;--border:rgba(99,130,255,.15);--accent:#5b7fff;--accent2:#7c5cfc;--accent3:#38d9a9;--text:#e8eaf6;--muted:#8892b0;--danger:#ff6b6b;--gold:#ffd166;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text);min-height:100vh;}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:240px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:1.5rem 0;z-index:50;}
+.sidebar-logo{display:flex;align-items:center;gap:.7rem;padding:0 1.5rem 1.5rem;border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-weight:800;font-size:1.15rem;text-decoration:none;color:var(--text);}
+.sidebar-logo-icon{width:36px;height:36px;border-radius:10px;flex-shrink:0;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:1.1rem;}
+.nav-section-label{font-size:.68rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:.8rem 1.5rem .4rem;margin-top:.5rem;}
+.nav-item{display:flex;align-items:center;gap:.75rem;padding:.7rem 1.5rem;color:var(--muted);font-size:.88rem;transition:all .2s;border-left:2px solid transparent;text-decoration:none;}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.03);}
+.nav-item.active{color:var(--text);background:rgba(91,127,255,.1);border-left-color:var(--accent);}
+.nav-icon{font-size:1.1rem;width:20px;text-align:center;}
+.sidebar-footer{margin-top:auto;padding:1.5rem;border-top:1px solid var(--border);}
+.user-info{display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem;}
+.user-avatar{width:36px;height:36px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:700;}
+.user-details strong{display:block;font-size:.85rem;font-weight:600;}
+.user-details small{color:var(--muted);font-size:.72rem;}
+.btn-logout{width:100%;padding:.6rem;border-radius:8px;border:1px solid rgba(255,107,107,.3);background:rgba(255,107,107,.08);color:#ff9999;font-family:'DM Sans',sans-serif;font-size:.83rem;cursor:pointer;transition:background .2s;display:flex;align-items:center;justify-content:center;gap:.5rem;}
+.btn-logout:hover{background:rgba(255,107,107,.15);}
+.main{margin-left:240px;padding:2rem 2.5rem;}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem;}
+.page-header h1{font-family:'Syne',sans-serif;font-weight:800;font-size:1.6rem;}
+.page-header p{color:var(--muted);font-size:.92rem;margin-top:.3rem;}
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:2rem;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.2rem;transition:transform .2s;border-left:3px solid var(--accent);}
+.stat-card:hover{transform:translateY(-2px);}
+.stat-val{font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;margin-top:.3rem;}
+.stat-lbl{color:var(--muted);font-size:.78rem;}
+.stat-sub{color:var(--muted);font-size:.74rem;margin-top:.2rem;}
+/* TABS */
+.tabs{display:flex;gap:.4rem;margin-bottom:1.5rem;background:var(--card);padding:.4rem;border-radius:10px;flex-wrap:wrap;}
+.tab-btn{padding:.55rem 1.1rem;border-radius:7px;border:none;background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.83rem;font-weight:500;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.tab-btn.active{background:var(--accent);color:#fff;font-weight:600;}
+/* PANELS */
+.panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.5rem;margin-bottom:1.5rem;}
+.panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;}
+.panel-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;}
+/* PROGRESS BAR */
+.prog-wrap{margin-bottom:1.5rem;}
+.prog-top{display:flex;justify-content:space-between;margin-bottom:.4rem;font-size:.83rem;}
+.prog-bar{height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:4px;transition:width .8s ease;}
+/* TABLE */
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+thead tr{border-bottom:1px solid var(--border);}
+th{padding:.7rem 1rem;color:var(--muted);font-size:.72rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;text-align:left;}
+td{padding:.85rem 1rem;color:var(--text);font-size:.85rem;border-bottom:1px solid var(--border);}
+tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:rgba(255,255,255,.02);}
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:.22rem .65rem;border-radius:6px;font-size:.72rem;font-weight:600;}
+.b-success{background:rgba(56,217,169,.12);color:var(--accent3);}
+.b-warning{background:rgba(255,209,102,.12);color:var(--gold);}
+.b-danger{background:rgba(255,107,107,.12);color:var(--danger);}
+.b-default{background:rgba(91,127,255,.12);color:var(--accent);}
+/* INFO ROW */
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:.6rem .9rem;background:var(--card2);border-radius:8px;margin-bottom:.5rem;font-size:.85rem;}
+.info-label{color:var(--muted);}
+/* BTN */
+.btn-create{display:none;align-items:center;gap:.5rem;padding:.6rem 1.2rem;border-radius:8px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-family:'DM Sans',sans-serif;font-weight:600;font-size:.85rem;cursor:pointer;transition:opacity .2s;}
+.btn-create:hover{opacity:.9;}
+.btn-create.visible{display:flex;}
+.btn-sm{padding:.38rem .8rem;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.78rem;cursor:pointer;transition:all .2s;}
+.btn-sm:hover{border-color:var(--accent3);color:var(--accent3);}
+/* GRID 2 */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.5rem;}
+@media(max-width:800px){.grid2{grid-template-columns:1fr;}}
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;padding:1rem;}
+.modal-overlay.show{opacity:1;pointer-events:all;}
+.modal-box{background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:2rem;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;transform:translateY(20px);transition:transform .25s;}
+.modal-overlay.show .modal-box{transform:translateY(0);}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;}
+.modal-header h2{font-family:'Syne',sans-serif;font-weight:800;font-size:1.15rem;}
+.modal-close{background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;}
+.form-group{display:flex;flex-direction:column;gap:.4rem;margin-bottom:1rem;}
+.form-label{font-size:.75rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);}
+.form-input,.form-select{width:100%;padding:.8rem 1rem;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.9rem;transition:border-color .2s;}
+.form-input:focus,.form-select:focus{outline:none;border-color:var(--accent);}
+.form-input::placeholder{color:var(--muted);}
+.form-select option{background:var(--card2);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.ferr{color:var(--danger);font-size:.74rem;display:none;}
+.ferr.show{display:block;}
+.btn-submit{width:100%;padding:.88rem;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-family:'DM Sans',sans-serif;font-weight:600;font-size:1rem;cursor:pointer;margin-top:.5rem;transition:opacity .2s;}
+.btn-submit:hover{opacity:.9;}
+.btn-submit:disabled{opacity:.5;cursor:not-allowed;}
+/* EMPTY */
+.empty-state{text-align:center;padding:3rem;color:var(--muted);}
+.empty-icon{font-size:2.5rem;margin-bottom:.75rem;opacity:.4;}
+.empty-state h3{font-family:'Syne',sans-serif;font-size:1rem;color:var(--text);margin-bottom:.4rem;}
+/* LOADING + TOAST */
+.loading-screen{position:fixed;inset:0;background:var(--navy);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:1rem;}
+.loading-spinner{width:44px;height:44px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+.loading-text{color:var(--muted);font-size:.9rem;}
+.toast{position:fixed;bottom:2rem;right:2rem;z-index:1000;background:var(--card2);border:1px solid var(--border);border-left:4px solid var(--accent3);border-radius:12px;padding:1rem 1.4rem;font-size:.88rem;color:var(--text);box-shadow:0 10px 40px rgba(0,0,0,.4);transform:translateX(120%);transition:transform .35s cubic-bezier(.22,1,.36,1);max-width:320px;}
+.toast.show{transform:translateX(0);}
+.toast.error{border-left-color:var(--danger);}
+@media(max-width:900px){.sidebar{display:none;}.main{margin-left:0;padding:1.5rem;}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+@keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+<div class="loading-screen" id="ls"><div class="loading-spinner"></div><div class="loading-text">Chargement...</div></div>
+
+<aside class="sidebar" id="sidebar" style="display:none"></aside>
+
+<main class="main" id="mainContent" style="display:none">
+  <div class="page-header">
+    <div>
+      <h1>💰 Finances</h1>
+      <p>Gestion budgétaire et financière de la copropriété</p>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats" id="statsGrid"></div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="setTab('dashboard',this)">⊞ Vue globale</button>
+    <button class="tab-btn" onclick="setTab('charges',this)">📋 Charges</button>
+    <button class="tab-btn" onclick="setTab('depenses',this)">💸 Dépenses</button>
+    <button class="tab-btn" onclick="setTab('budget',this)">📊 Budget</button>
+    <button class="tab-btn" onclick="setTab('dettes',this)">⚠️ Dettes</button>
+    <button class="tab-btn" onclick="setTab('historique',this)">🕐 Historique</button>
+  </div>
+
+  <div id="tabContent"></div>
+</main>
+
+<!-- MODAL CHARGE -->
+<div class="modal-overlay" id="chargeModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>📋 Nouvel appel de charges</h2>
+      <button class="modal-close" onclick="closeModal('chargeModal')">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description *</label>
+      <input type="text" class="form-input" id="c-desc" placeholder="Charges T1 2026">
+      <span class="ferr" id="e-cdesc">Champ requis</span>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Montant (€) *</label>
+        <input type="number" class="form-input" id="c-montant" placeholder="781.25" step="0.01">
+        <span class="ferr" id="e-cmontant">Montant invalide</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Échéance *</label>
+        <input type="date" class="form-input" id="c-echeance">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Copropriétaire concerné</label>
+      <input type="text" class="form-input" id="c-proprio" placeholder="Nom du copropriétaire">
+    </div>
+    <button class="btn-submit" id="btnCharge" onclick="addCharge()">✅ Créer l'appel de charges</button>
+  </div>
+</div>
+
+<!-- MODAL PAIEMENT -->
+<div class="modal-overlay" id="paiementModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>💳 Enregistrer un paiement</h2>
+      <button class="modal-close" onclick="closeModal('paiementModal')">✕</button>
+    </div>
+    <input type="hidden" id="p-chargeId">
+    <div id="p-info" style="margin-bottom:1rem"></div>
+    <div class="form-group">
+      <label class="form-label">Montant payé (€) *</label>
+      <input type="number" class="form-input" id="p-montant" placeholder="0" step="0.01">
+    </div>
+    <button class="btn-submit" onclick="savePaiement()">✅ Enregistrer le paiement</button>
+  </div>
+</div>
+
+<!-- MODAL DÉPENSE -->
+<div class="modal-overlay" id="depenseModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>💸 Nouvelle dépense</h2>
+      <button class="modal-close" onclick="closeModal('depenseModal')">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description *</label>
+      <input type="text" class="form-input" id="d-desc" placeholder="Entretien ascenseur">
+      <span class="ferr" id="e-ddesc">Champ requis</span>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Fournisseur</label>
+      <input type="text" class="form-input" id="d-fournisseur" placeholder="Nom du prestataire">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Montant (€) *</label>
+        <input type="number" class="form-input" id="d-montant" placeholder="1200" step="0.01">
+        <span class="ferr" id="e-dmontant">Montant invalide</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date *</label>
+        <input type="date" class="form-input" id="d-date">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Catégorie</label>
+      <select class="form-select" id="d-cat">
+        <option>Entretien</option><option>Chauffage</option><option>Électricité</option>
+        <option>Travaux</option><option>Assurance</option><option>Équipement</option><option>Autre</option>
+      </select>
+    </div>
+    <button class="btn-submit" id="btnDepense" onclick="addDepense()">✅ Enregistrer la dépense</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="sidebar.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+let currentUser = null;
+let currentProfile = 'locataire';
+let charges = [];
+let depenses = [];
+let currentTab = 'dashboard';
+const BUDGET_TOTAL = 250000;
+
+auth.onAuthStateChanged(async user => {
+  if (!user) { window.location.href = 'login.html'; return; }
+  currentUser = user;
+  try {
+    const snap = await db.collection('users').doc(user.uid).get();
+    if (snap.exists) {
+      const d = snap.data();
+      currentProfile = d.profile || 'locataire';
+      const name = d.prenom ? `${d.prenom} ${d.nom||''}`.trim() : user.displayName || user.email.split('@')[0];
+      buildSidebar(currentProfile||d.profile||'locataire', name, user.email, 'finances.html');
+    }
+  } catch(e) {}
+
+  if (['syndic','conseil'].includes(currentProfile)) {  }
+
+  document.getElementById('ls').style.display = 'none';
+  document.getElementById('sidebar').style.display = 'flex';
+  document.getElementById('mainContent').style.display = 'block';
+
+  // Dates par défaut
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('c-echeance').value = today;
+  document.getElementById('d-date').value = today;
+
+  loadData();
+});
+
+function loadData() {
+  // Charges
+  db.collection('charges').orderBy('createdAt','desc').onSnapshot(snap => {
+    charges = [];
+    snap.forEach(doc => charges.push({ id: doc.id, ...doc.data() }));
+    renderStats();
+    renderTab();
+  });
+  // Dépenses
+  db.collection('depenses').orderBy('date','desc').onSnapshot(snap => {
+    depenses = [];
+    snap.forEach(doc => depenses.push({ id: doc.id, ...doc.data() }));
+    renderStats();
+    renderTab();
+  });
+}
+
+function renderStats() {
+  const totalCharges  = charges.reduce((s,c) => s + (c.montant||0), 0);
+  const totalPaye     = charges.reduce((s,c) => s + (c.statut==='paye' ? c.montant : c.montantPaye||0), 0);
+  const totalDepenses = depenses.reduce((s,d) => s + (d.montant||0), 0);
+  const tauxRec       = totalCharges ? Math.round(totalPaye/totalCharges*100) : 0;
+
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-card" style="border-left-color:var(--accent)">
+      <div class="stat-lbl">💼 Budget annuel</div>
+      <div class="stat-val">${BUDGET_TOTAL.toLocaleString('fr-FR')} €</div>
+    </div>
+    <div class="stat-card" style="border-left-color:var(--danger)">
+      <div class="stat-lbl">💸 Dépenses réelles</div>
+      <div class="stat-val">${totalDepenses.toLocaleString('fr-FR')} €</div>
+      <div class="stat-sub">${Math.round(totalDepenses/BUDGET_TOTAL*100)}% du budget</div>
+    </div>
+    <div class="stat-card" style="border-left-color:var(--gold)">
+      <div class="stat-lbl">📋 Charges appelées</div>
+      <div class="stat-val">${totalCharges.toLocaleString('fr-FR')} €</div>
+    </div>
+    <div class="stat-card" style="border-left-color:var(--accent3)">
+      <div class="stat-lbl">✅ Taux recouvrement</div>
+      <div class="stat-val">${tauxRec}%</div>
+      <div class="stat-sub">${totalPaye.toLocaleString('fr-FR')} € encaissés</div>
+    </div>`;
+}
+
+function setTab(tab, btn) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTab();
+}
+
+function renderTab() {
+  const isSyndic = currentProfile === 'syndic';
+  const content = document.getElementById('tabContent');
+
+  if (currentTab === 'dashboard') {
+    const totalCharges  = charges.reduce((s,c) => s+(c.montant||0), 0);
+    const totalPaye     = charges.reduce((s,c) => s+(c.statut==='paye'?c.montant:c.montantPaye||0), 0);
+    const totalImpaye   = charges.filter(c=>c.statut==='impaye').reduce((s,c)=>s+(c.montant||0),0);
+    const totalDepenses = depenses.reduce((s,d)=>s+(d.montant||0),0);
+    const tauxRec       = totalCharges ? Math.round(totalPaye/totalCharges*100) : 0;
+    const tauxBudget    = Math.round(totalDepenses/BUDGET_TOTAL*100);
+
+    content.innerHTML = `
+      <div class="grid2">
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">📊 Progression budget</span></div>
+          <div class="prog-wrap">
+            <div class="prog-top">
+              <span style="color:var(--muted)">Exécuté</span>
+              <span style="color:var(--accent)">${totalDepenses.toLocaleString('fr-FR')} € / ${BUDGET_TOTAL.toLocaleString('fr-FR')} €</span>
+            </div>
+            <div class="prog-bar"><div class="prog-fill" style="width:${tauxBudget}%;background:linear-gradient(90deg,var(--accent),var(--accent2))"></div></div>
+            <div style="font-size:.78rem;color:var(--muted);margin-top:.4rem">${tauxBudget}% du budget consommé</div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">💳 Recouvrement charges</span></div>
+          <div class="prog-wrap">
+            <div class="prog-top">
+              <span style="color:var(--muted)">Encaissé</span>
+              <span style="color:var(--accent3)">${tauxRec}%</span>
+            </div>
+            <div class="prog-bar"><div class="prog-fill" style="width:${tauxRec}%;background:var(--accent3)"></div></div>
+          </div>
+          <div class="info-row"><span class="info-label">Encaissé</span><span style="color:var(--accent3)">${totalPaye.toLocaleString('fr-FR')} €</span></div>
+          <div class="info-row"><span class="info-label">Impayé</span><span style="color:var(--danger)">${totalImpaye.toLocaleString('fr-FR')} €</span></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">📋 Dernières charges</span></div>
+        ${renderChargesTable(charges.slice(0,5), false)}
+      </div>`;
+
+  } else if (currentTab === 'charges') {
+    content.innerHTML = `
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">📋 Appels de charges</span>
+          ${isSyndic ? `<button class="btn-create visible" onclick="openModal('chargeModal')">+ Appel de charges</button>` : ''}
+        </div>
+        ${renderChargesTable(charges, isSyndic)}
+      </div>`;
+
+  } else if (currentTab === 'depenses') {
+    content.innerHTML = `
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">💸 Dépenses</span>
+          ${isSyndic ? `<button class="btn-create visible" onclick="openModal('depenseModal')">+ Dépense</button>` : ''}
+        </div>
+        ${renderDepensesTable()}
+      </div>`;
+
+  } else if (currentTab === 'budget') {
+    const CATS = [
+      {cat:'Entretien',budget:15000,color:'var(--accent3)'},
+      {cat:'Chauffage',budget:80000,color:'var(--danger)'},
+      {cat:'Assurance',budget:15000,color:'var(--accent)'},
+      {cat:'Travaux',budget:30000,color:'var(--gold)'},
+      {cat:'Équipement',budget:20000,color:'#8b5cf6'},
+      {cat:'Électricité',budget:8000,color:'#06b6d4'},
+    ];
+    content.innerHTML = `<div class="panel">
+      <div class="panel-header"><span class="panel-title">📊 Budget par catégorie</span></div>
+      ${CATS.map(b => {
+        const dep = depenses.filter(d=>d.categorie===b.cat).reduce((s,d)=>s+(d.montant||0),0);
+        const pct = Math.min(Math.round(dep/b.budget*100),100);
+        return `<div class="prog-wrap">
+          <div class="prog-top">
+            <span style="color:var(--text);font-size:.85rem">${b.cat}</span>
+            <span style="color:${b.color};font-size:.82rem">${dep.toLocaleString('fr-FR')} € / ${b.budget.toLocaleString('fr-FR')} € (${pct}%)</span>
+          </div>
+          <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${b.color}"></div></div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  } else if (currentTab === 'dettes') {
+    const dettes = charges.filter(c => ['impaye','partiel'].includes(c.statut));
+    content.innerHTML = `<div class="panel">
+      <div class="panel-header"><span class="panel-title">⚠️ Dettes en cours</span></div>
+      ${dettes.length === 0
+        ? `<div class="empty-state"><div class="empty-icon">✅</div><h3>Aucune dette</h3><p>Tous les paiements sont à jour !</p></div>`
+        : `<div class="table-wrap"><table>
+            <thead><tr><th>Copropriétaire</th><th>Description</th><th>Montant dû</th><th>Échéance</th><th>Statut</th></tr></thead>
+            <tbody>${dettes.map(c => {
+              const du = c.statut==='partiel' ? (c.montant-(c.montantPaye||0)) : c.montant;
+              return `<tr>
+                <td>${c.proprio||'—'}</td>
+                <td>${c.description}</td>
+                <td style="color:var(--danger);font-weight:700">${du.toLocaleString('fr-FR')} €</td>
+                <td style="color:var(--muted)">${c.echeance||'—'}</td>
+                <td><span class="badge ${c.statut==='impaye'?'b-danger':'b-warning'}">${c.statut==='impaye'?'✗ Impayé':'⚠ Partiel'}</span></td>
+              </tr>`;
+            }).join('')}</tbody>
+          </table></div>`}
+    </div>`;
+
+  } else if (currentTab === 'historique') {
+    const hist = [
+      ...charges.filter(c=>['paye','partiel'].includes(c.statut)).map(c=>({
+        type:'recette', desc:c.description, montant:c.statut==='paye'?c.montant:(c.montantPaye||0), date:c.datePaiement||c.echeance||''
+      })),
+      ...depenses.map(d=>({ type:'depense', desc:d.description, montant:d.montant||0, date:d.date||'' }))
+    ].sort((a,b) => new Date(b.date)-new Date(a.date));
+
+    content.innerHTML = `<div class="panel">
+      <div class="panel-header"><span class="panel-title">🕐 Historique des transactions</span></div>
+      ${hist.length === 0
+        ? `<div class="empty-state"><div class="empty-icon">🕐</div><h3>Aucune transaction</h3></div>`
+        : `<div class="table-wrap"><table>
+            <thead><tr><th>Type</th><th>Description</th><th>Montant</th><th>Date</th></tr></thead>
+            <tbody>${hist.map(h => `<tr>
+              <td><span class="badge ${h.type==='recette'?'b-success':'b-danger'}">${h.type==='recette'?'💚 Recette':'💸 Dépense'}</span></td>
+              <td>${h.desc}</td>
+              <td style="color:${h.type==='recette'?'var(--accent3)':'var(--danger)'};font-weight:700">${h.type==='recette'?'+':'-'}${h.montant.toLocaleString('fr-FR')} €</td>
+              <td style="color:var(--muted)">${h.date||'—'}</td>
+            </tr>`).join('')}</tbody>
+          </table></div>`}
+    </div>`;
+  }
+}
+
+function renderChargesTable(list, canPay) {
+  if (list.length === 0) return `<div class="empty-state"><div class="empty-icon">📋</div><h3>Aucune charge</h3><p>Aucun appel de charges pour l'instant.</p></div>`;
+  return `<div class="table-wrap"><table>
+    <thead><tr><th>Copropriétaire</th><th>Description</th><th>Montant</th><th>Échéance</th><th>Statut</th>${canPay?'<th>Action</th>':''}</tr></thead>
+    <tbody>${list.map(c => `<tr>
+      <td>${c.proprio||'—'}</td>
+      <td>${c.description}</td>
+      <td style="color:var(--gold);font-weight:700">${(c.montant||0).toLocaleString('fr-FR')} €</td>
+      <td style="color:var(--muted)">${c.echeance||'—'}</td>
+      <td><span class="badge ${c.statut==='paye'?'b-success':c.statut==='partiel'?'b-warning':'b-danger'}">${c.statut==='paye'?'✓ Payé':c.statut==='partiel'?'⚠ Partiel':'✗ Impayé'}</span></td>
+      ${canPay&&c.statut!=='paye'?`<td><button class="btn-sm" onclick="openPaiement('${c.id}','${c.description}',${c.montant},${c.montantPaye||0})">💳 Paiement</button></td>`:''}
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+function renderDepensesTable() {
+  if (depenses.length === 0) return `<div class="empty-state"><div class="empty-icon">💸</div><h3>Aucune dépense</h3></div>`;
+  return `<div class="table-wrap"><table>
+    <thead><tr><th>Description</th><th>Fournisseur</th><th>Montant</th><th>Date</th><th>Catégorie</th></tr></thead>
+    <tbody>${depenses.map(d => `<tr>
+      <td>${d.description}</td>
+      <td style="color:var(--muted)">${d.fournisseur||'—'}</td>
+      <td style="color:var(--danger);font-weight:700">${(d.montant||0).toLocaleString('fr-FR')} €</td>
+      <td style="color:var(--muted)">${d.date||'—'}</td>
+      <td><span class="badge b-default">${d.categorie||'Autre'}</span></td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+// ── Ajouter charge ──
+async function addCharge() {
+  const desc    = document.getElementById('c-desc').value.trim();
+  const montant = parseFloat(document.getElementById('c-montant').value);
+  const ech     = document.getElementById('c-echeance').value;
+  const proprio = document.getElementById('c-proprio').value.trim();
+
+  let ok = true;
+  if (!desc)        { document.getElementById('e-cdesc').classList.add('show');    ok=false; } else document.getElementById('e-cdesc').classList.remove('show');
+  if (!montant||montant<=0) { document.getElementById('e-cmontant').classList.add('show'); ok=false; } else document.getElementById('e-cmontant').classList.remove('show');
+  if (!ok) return;
+
+  const btn = document.getElementById('btnCharge');
+  btn.disabled = true; btn.textContent = 'Création...';
+  try {
+    await db.collection('charges').add({
+      description: desc, montant, echeance: ech, proprio,
+      statut: 'impaye', montantPaye: 0, datePaiement: null,
+      createdBy: currentUser.uid,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    closeModal('chargeModal');
+    showToast('✅ Appel de charges créé !');
+    document.getElementById('c-desc').value = '';
+    document.getElementById('c-montant').value = '';
+    document.getElementById('c-proprio').value = '';
+  } catch(e) { showToast('❌ Erreur', true); }
+  finally { btn.disabled=false; btn.textContent='✅ Créer l\'appel de charges'; }
+}
+
+// ── Paiement charge ──
+function openPaiement(id, desc, montant, montantPaye) {
+  document.getElementById('p-chargeId').value = id;
+  const reste = montant - montantPaye;
+  document.getElementById('p-info').innerHTML = `
+    <div class="info-row"><span class="info-label">Description</span><span>${desc}</span></div>
+    <div class="info-row"><span class="info-label">Montant total</span><span style="color:var(--gold)">${montant.toLocaleString('fr-FR')} €</span></div>
+    <div class="info-row"><span class="info-label">Reste à payer</span><span style="color:var(--danger)">${reste.toLocaleString('fr-FR')} €</span></div>`;
+  document.getElementById('p-montant').value = reste;
+  openModal('paiementModal');
+}
+
+async function savePaiement() {
+  const id      = document.getElementById('p-chargeId').value;
+  const montantPaye = parseFloat(document.getElementById('p-montant').value);
+  if (!montantPaye || montantPaye <= 0) { showToast('⚠️ Montant invalide', true); return; }
+
+  const charge = charges.find(c => c.id === id);
+  if (!charge) return;
+  const total    = Math.min(montantPaye, charge.montant);
+  const statut   = total >= charge.montant ? 'paye' : 'partiel';
+
+  try {
+    await db.collection('charges').doc(id).update({
+      montantPaye: total, statut,
+      datePaiement: new Date().toISOString().split('T')[0]
+    });
+    closeModal('paiementModal');
+    showToast('✅ Paiement enregistré !');
+  } catch(e) { showToast('❌ Erreur', true); }
+}
+
+// ── Ajouter dépense ──
+async function addDepense() {
+  const desc       = document.getElementById('d-desc').value.trim();
+  const fournisseur= document.getElementById('d-fournisseur').value.trim();
+  const montant    = parseFloat(document.getElementById('d-montant').value);
+  const date       = document.getElementById('d-date').value;
+  const cat        = document.getElementById('d-cat').value;
+
+  let ok = true;
+  if (!desc)           { document.getElementById('e-ddesc').classList.add('show');    ok=false; } else document.getElementById('e-ddesc').classList.remove('show');
+  if (!montant||montant<=0) { document.getElementById('e-dmontant').classList.add('show'); ok=false; } else document.getElementById('e-dmontant').classList.remove('show');
+  if (!ok) return;
+
+  const btn = document.getElementById('btnDepense');
+  btn.disabled=true; btn.textContent='Enregistrement...';
+  try {
+    await db.collection('depenses').add({
+      description: desc, fournisseur, montant, date, categorie: cat,
+      createdBy: currentUser.uid,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    closeModal('depenseModal');
+    showToast('✅ Dépense enregistrée !');
+    document.getElementById('d-desc').value = '';
+    document.getElementById('d-fournisseur').value = '';
+    document.getElementById('d-montant').value = '';
+  } catch(e) { showToast('❌ Erreur', true); }
+  finally { btn.disabled=false; btn.textContent='✅ Enregistrer la dépense'; }
+}
+
+function openModal(id)  { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+async function handleLogout() { await auth.signOut(); window.location.href = 'login.html'; }
+
+let toastTimer;
+function showToast(msg, isErr=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show'+(isErr?' error':'');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>

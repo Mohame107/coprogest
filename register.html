@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoproGest — Inscription</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<style>
+:root {
+  --navy:    #0a0f1e;
+  --card:    #141d30;
+  --card2:   #1a2540;
+  --border:  rgba(99,130,255,0.15);
+  --accent:  #5b7fff;
+  --accent2: #7c5cfc;
+  --accent3: #38d9a9;
+  --text:    #e8eaf6;
+  --muted:   #8892b0;
+  --danger:  #ff6b6b;
+  --gold:    #ffd166;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family:'DM Sans',sans-serif;
+  background:
+    radial-gradient(ellipse 60% 50% at 30% 20%, rgba(91,127,255,.14) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 75% 80%, rgba(124,92,252,.12) 0%, transparent 60%),
+    var(--navy);
+  color:var(--text);
+  min-height:100vh;
+  display:flex; align-items:center; justify-content:center;
+  padding:2rem;
+}
+
+/* ── CARD ── */
+.card {
+  width:100%; max-width:490px;
+  background:var(--card); border:1px solid var(--border);
+  border-radius:20px; padding:2.5rem;
+  animation:fadeUp .5s ease both;
+}
+
+/* ── LOGO ── */
+.logo { text-align:center; margin-bottom:1.8rem; }
+.logo-icon {
+  width:60px; height:60px; border-radius:16px; margin:0 auto .8rem;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex; align-items:center; justify-content:center; font-size:1.8rem;
+  box-shadow:0 8px 24px rgba(91,127,255,.3);
+}
+.logo h1 { font-family:'Syne',sans-serif; font-weight:800; font-size:1.4rem; }
+.logo p  { color:var(--muted); font-size:.85rem; margin-top:.2rem; }
+
+/* ── STEPPER ── */
+.stepper { display:flex; align-items:center; margin-bottom:2rem; }
+.step { flex:1; text-align:center; }
+.step-dot {
+  width:32px; height:32px; border-radius:50%; margin:0 auto .4rem;
+  display:flex; align-items:center; justify-content:center;
+  font-size:.8rem; font-weight:700; border:2px solid var(--border);
+  background:var(--card2); color:var(--muted); transition:all .3s;
+}
+.step.active .step-dot { border-color:var(--accent); background:rgba(91,127,255,.15); color:var(--accent); }
+.step.done   .step-dot { border-color:var(--accent3); background:rgba(56,217,169,.15); color:var(--accent3); }
+.step-lbl { font-size:.7rem; color:var(--muted); }
+.step.active .step-lbl { color:var(--accent); }
+.step.done   .step-lbl { color:var(--accent3); }
+.step-line { height:2px; flex:1; background:var(--border); margin-bottom:20px; transition:background .3s; }
+.step-line.done { background:var(--accent3); }
+
+/* ── ALERT ── */
+.alert {
+  padding:.85rem 1rem; border-radius:10px; font-size:.88rem;
+  margin-bottom:1rem; display:none; align-items:center; gap:.6rem;
+}
+.alert.show  { display:flex; }
+.alert.error   { background:rgba(255,107,107,.1); border:1px solid rgba(255,107,107,.3); color:#ff9999; }
+.alert.success { background:rgba(56,217,169,.1);  border:1px solid rgba(56,217,169,.3);  color:var(--accent3); }
+
+/* ── FORM ── */
+.form { display:flex; flex-direction:column; gap:1rem; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+.fg { display:flex; flex-direction:column; gap:.35rem; }
+.field-label { font-size:.75rem; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); }
+.fw { position:relative; }
+.fi { position:absolute; left:.9rem; top:50%; transform:translateY(-50%); font-size:.95rem; pointer-events:none; }
+.fw input, .fw select {
+  width:100%; padding:.8rem 1rem .8rem 2.5rem;
+  background:var(--card2); border:1px solid var(--border); border-radius:10px;
+  color:var(--text); font-family:'DM Sans',sans-serif; font-size:.9rem;
+  transition:border-color .2s; -webkit-appearance:none;
+}
+.fw input:focus, .fw select:focus { outline:none; border-color:var(--accent); }
+.fw input::placeholder { color:var(--muted); }
+.fw input.error { border-color:var(--danger); }
+.fw select option { background:var(--card2); }
+.pwd-toggle {
+  position:absolute; right:.9rem; top:50%; transform:translateY(-50%);
+  background:none; border:none; cursor:pointer; color:var(--muted); font-size:.9rem;
+}
+.pwd-toggle:hover { color:var(--text); }
+.ferr { color:var(--danger); font-size:.75rem; display:none; }
+.ferr.show { display:block; }
+
+/* ── FORCE MOT DE PASSE ── */
+.pwd-strength { margin-top:.4rem; }
+.pwd-bars { display:flex; gap:4px; }
+.pwd-bar  { height:4px; flex:1; border-radius:2px; background:var(--border); transition:background .3s; }
+.pwd-bar.weak   { background:var(--danger); }
+.pwd-bar.medium { background:var(--gold); }
+.pwd-bar.strong { background:var(--accent3); }
+.pwd-txt { font-size:.72rem; color:var(--muted); margin-top:.3rem; }
+
+/* ── CGU ── */
+.cgu {
+  display:flex; align-items:flex-start; gap:.6rem;
+  padding:.75rem; background:var(--card2); border-radius:8px;
+  border:1px solid var(--border);
+}
+.cgu input { accent-color:var(--accent); margin-top:2px; flex-shrink:0; cursor:pointer; }
+.cgu label { font-size:.83rem; color:var(--muted); line-height:1.5; cursor:pointer; }
+.cgu a { color:var(--accent); text-decoration:none; }
+.cgu a:hover { text-decoration:underline; }
+
+/* ── BOUTONS NAV ── */
+.nav-btns { display:flex; gap:.75rem; margin-top:.25rem; }
+.btn-next {
+  flex:1; padding:.88rem; border-radius:10px; border:none;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#fff; font-family:'DM Sans',sans-serif; font-weight:600;
+  font-size:1rem; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; gap:.5rem;
+  transition:opacity .2s, transform .15s;
+  box-shadow:0 6px 20px rgba(91,127,255,.35);
+  position:relative;
+}
+.btn-next:hover:not(:disabled) { opacity:.9; transform:translateY(-1px); }
+.btn-next:disabled { opacity:.6; cursor:not-allowed; }
+.btn-next .spinner {
+  display:none; width:18px; height:18px; border:2px solid rgba(255,255,255,.3);
+  border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite;
+}
+.btn-next.loading .btn-txt { display:none; }
+.btn-next.loading .spinner  { display:block; }
+.btn-back {
+  padding:.88rem 1.4rem; border-radius:10px;
+  border:1px solid var(--border); background:var(--card2);
+  color:var(--text); font-family:'DM Sans',sans-serif; font-weight:500;
+  font-size:.95rem; cursor:pointer; display:none;
+  align-items:center; justify-content:center;
+  transition:background .2s;
+}
+.btn-back.show { display:flex; }
+.btn-back:hover { background:rgba(255,255,255,.05); }
+
+/* ── DIVIDER ── */
+.divider {
+  display:flex; align-items:center; gap:1rem;
+  margin:1rem 0; color:var(--muted); font-size:.82rem;
+}
+.divider::before,.divider::after { content:''; flex:1; height:1px; background:var(--border); }
+
+/* ── GOOGLE ── */
+.btn-google {
+  width:100%; padding:.75rem; border-radius:10px;
+  border:1px solid var(--border); background:var(--card2);
+  color:var(--text); font-family:'DM Sans',sans-serif; font-weight:500;
+  font-size:.9rem; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; gap:.6rem;
+  transition:background .2s, border-color .2s;
+}
+.btn-google:hover { background:rgba(255,255,255,.05); border-color:rgba(99,130,255,.4); }
+
+/* ── FOOTER ── */
+.foot { text-align:center; font-size:.85rem; color:var(--muted); margin-top:1rem; }
+.foot a { color:var(--accent); text-decoration:none; font-weight:500; }
+.foot a:hover { text-decoration:underline; }
+
+/* ── TOAST ── */
+.toast {
+  position:fixed; bottom:2rem; right:2rem; z-index:1000;
+  background:var(--card2); border:1px solid var(--border);
+  border-left:4px solid var(--accent3); border-radius:12px;
+  padding:1rem 1.4rem; font-size:.88rem; color:var(--text);
+  box-shadow:0 10px 40px rgba(0,0,0,.4);
+  transform:translateX(120%); transition:transform .35s cubic-bezier(.22,1,.36,1);
+}
+.toast.show { transform:translateX(0); }
+
+@keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes spin    { to{transform:rotate(360deg)} }
+</style>
+</head>
+<body>
+
+<div class="card">
+
+  <!-- Logo -->
+  <div class="logo">
+    <div class="logo-icon">🏢</div>
+    <h1>CoproGest</h1>
+    <p>Créer votre compte</p>
+  </div>
+
+  <!-- Stepper -->
+  <div class="stepper">
+    <div class="step active" id="s1"><div class="step-dot">1</div><div class="step-lbl">Identité</div></div>
+    <div class="step-line" id="l1"></div>
+    <div class="step" id="s2"><div class="step-dot">2</div><div class="step-lbl">Logement</div></div>
+    <div class="step-line" id="l2"></div>
+    <div class="step" id="s3"><div class="step-dot">3</div><div class="step-lbl">Sécurité</div></div>
+  </div>
+
+  <!-- Alert -->
+  <div class="alert" id="alertBox"><span id="alertIcon"></span><span id="alertMsg"></span></div>
+
+  <div class="form">
+
+    <!-- ── ÉTAPE 1 : Identité ── -->
+    <div id="sec1">
+      <div class="form-row">
+        <div class="fg">
+          <label class="field-label">Prénom</label>
+          <div class="fw"><span class="fi">👤</span><input type="text" id="f-prenom" placeholder="Jean"></div>
+          <span class="ferr" id="e-prenom">Champ requis.</span>
+        </div>
+        <div class="fg">
+          <label class="field-label">Nom</label>
+          <div class="fw"><span class="fi">👤</span><input type="text" id="f-nom" placeholder="Dupont"></div>
+          <span class="ferr" id="e-nom">Champ requis.</span>
+        </div>
+      </div>
+      <div class="fg" style="margin-top:1rem">
+        <label class="field-label">Adresse e-mail</label>
+        <div class="fw"><span class="fi">✉️</span><input type="email" id="f-email" placeholder="votre@email.fr" autocomplete="email"></div>
+        <span class="ferr" id="e-email">Email invalide.</span>
+      </div>
+      <div class="fg" style="margin-top:1rem">
+        <label class="field-label">Téléphone</label>
+        <div class="fw"><span class="fi">📱</span><input type="tel" id="f-tel" placeholder="+33 6 12 34 56 78"></div>
+      </div>
+    </div>
+
+    <!-- ── ÉTAPE 2 : Logement ── -->
+    <div id="sec2" style="display:none">
+      <!-- Profil fixé à Locataire, non modifiable -->
+      <input type="hidden" id="f-profile" value="locataire">
+      <div class="fg" style="margin-bottom:1rem">
+        <label class="field-label">Profil</label>
+        <div style="display:flex;align-items:center;gap:.6rem;padding:.8rem 1rem;background:var(--card2);border:1px solid var(--border);border-radius:10px;font-size:.9rem;color:var(--muted);">
+          🔑 Locataire <span style="margin-left:auto;font-size:.72rem;background:rgba(56,217,169,.12);color:var(--accent3);padding:.2rem .6rem;border-radius:20px;">Accès résidentiel</span>
+        </div>
+        <span style="font-size:.74rem;color:var(--muted);margin-top:.3rem;">Seuls les locataires peuvent s'inscrire. Les autres profils sont créés par le Syndic.</span>
+      </div>
+      <div class="fg">
+        <label class="field-label">Nom de la copropriété</label>
+        <div class="fw"><span class="fi">🏢</span><input type="text" id="f-copro" placeholder="Résidence Les Jardins"></div>
+        <span class="ferr" id="e-copro">Champ requis.</span>
+      </div>
+      <div class="fg" style="margin-top:1rem">
+        <label class="field-label">Numéro de lot / Appartement</label>
+        <div class="fw"><span class="fi">🔢</span><input type="text" id="f-lot" placeholder="Lot 12 – Appt 3B"></div>
+        <span class="ferr" id="e-lot">Champ requis.</span>
+      </div>
+      <div class="fg" style="margin-top:1rem">
+        <label class="field-label">Type de logement</label>
+        <div class="fw">
+          <span class="fi">🏠</span>
+          <select id="f-type">
+            <option value="">Sélectionner...</option>
+            <option>Studio</option><option>T1</option><option>T2</option>
+            <option>T3</option><option>T4 et plus</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ÉTAPE 3 : Sécurité ── -->
+    <div id="sec3" style="display:none">
+      <div class="fg">
+        <label class="field-label">Mot de passe</label>
+        <div class="fw">
+          <span class="fi">🔒</span>
+          <input type="password" id="f-pwd" placeholder="••••••••" oninput="checkStrength()" autocomplete="new-password">
+          <button class="pwd-toggle" onclick="togglePwd('f-pwd','tb1')" id="tb1">👁️</button>
+        </div>
+        <div class="pwd-strength">
+          <div class="pwd-bars">
+            <div class="pwd-bar" id="b1"></div><div class="pwd-bar" id="b2"></div>
+            <div class="pwd-bar" id="b3"></div><div class="pwd-bar" id="b4"></div>
+          </div>
+          <div class="pwd-txt" id="pwdTxt">Entrez un mot de passe</div>
+        </div>
+        <span class="ferr" id="e-pwd">Minimum 8 caractères.</span>
+      </div>
+      <div class="fg" style="margin-top:1rem">
+        <label class="field-label">Confirmer le mot de passe</label>
+        <div class="fw">
+          <span class="fi">🔒</span>
+          <input type="password" id="f-pwd2" placeholder="••••••••" autocomplete="new-password">
+          <button class="pwd-toggle" onclick="togglePwd('f-pwd2','tb2')" id="tb2">👁️</button>
+        </div>
+        <span class="ferr" id="e-pwd2">Les mots de passe ne correspondent pas.</span>
+      </div>
+      <div class="cgu" style="margin-top:1rem">
+        <input type="checkbox" id="f-cgu">
+        <label for="f-cgu">J'accepte les <a href="#">conditions d'utilisation</a> et la <a href="#">politique de confidentialité</a> de CoproGest.</label>
+      </div>
+      <span class="ferr" id="e-cgu">Vous devez accepter les CGU.</span>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav-btns">
+      <button class="btn-back" id="btnBack" onclick="prevStep()">← Retour</button>
+      <button class="btn-next" id="btnNext" onclick="nextStep()">
+        <span class="btn-txt" id="btnTxt">Continuer →</span>
+        <div class="spinner"></div>
+      </button>
+    </div>
+
+    <div class="divider">ou</div>
+
+    <!-- Google -->
+    <button class="btn-google" onclick="handleGoogleRegister()">
+      <svg width="18" height="18" viewBox="0 0 48 48">
+        <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
+        <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
+        <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
+        <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l6.19 5.238C42.022 35.544 44 30.036 44 24c0-1.341-.138-2.65-.389-3.917z"/>
+      </svg>
+      S'inscrire avec Google
+    </button>
+
+  </div>
+
+  <div class="foot">Déjà un compte ? <a href="login.html">Se connecter</a></div>
+  <div class="foot" style="margin-top:.5rem"><a href="index.html" style="color:var(--muted);font-size:.82rem">← Retour à l'accueil</a></div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase config -->
+<script src="firebase-config.js"></script>
+
+<script>
+let currentStep = 1;
+
+// ── Pas de redirection automatique ──
+// L'utilisateur peut s'inscrire même s'il a une session active.
+
+// ── Navigation entre étapes ──
+async function nextStep() {
+  if (currentStep === 1 && !validateStep1()) return;
+  if (currentStep === 2 && !validateStep2()) return;
+  if (currentStep === 3) { await handleRegister(); return; }
+  goToStep(currentStep + 1);
+}
+function prevStep() { if (currentStep > 1) goToStep(currentStep - 1); }
+
+function goToStep(n) {
+  [1,2,3].forEach(i => {
+    document.getElementById('sec'+i).style.display = i===n ? 'block' : 'none';
+    const s = document.getElementById('s'+i);
+    s.className = 'step' + (i < n ? ' done' : i===n ? ' active' : '');
+  });
+  [1,2].forEach(i => {
+    document.getElementById('l'+i).className = 'step-line' + (i < n ? ' done' : '');
+  });
+  const back = document.getElementById('btnBack');
+  back.classList.toggle('show', n > 1);
+  document.getElementById('btnTxt').textContent = n === 3 ? '✅ Créer mon compte' : 'Continuer →';
+  currentStep = n;
+  hideAlert();
+}
+
+// ── Validations ──
+function validateStep1() {
+  let ok = true;
+  const prenom = document.getElementById('f-prenom').value.trim();
+  const nom    = document.getElementById('f-nom').value.trim();
+  const email  = document.getElementById('f-email').value.trim();
+  setErr('e-prenom','f-prenom', !prenom) && (ok=false);
+  setErr('e-nom',   'f-nom',    !nom)    && (ok=false);
+  setErr('e-email', 'f-email',  !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) && (ok=false);
+  return ok;
+}
+function validateStep2() {
+  let ok = true;
+  setErr('e-copro','f-copro', !document.getElementById('f-copro').value.trim()) && (ok=false);
+  setErr('e-lot',  'f-lot',   !document.getElementById('f-lot').value.trim())   && (ok=false);
+  return ok;
+}
+function validateStep3() {
+  let ok = true;
+  const pwd  = document.getElementById('f-pwd').value;
+  const pwd2 = document.getElementById('f-pwd2').value;
+  const cgu  = document.getElementById('f-cgu').checked;
+  setErr('e-pwd',  'f-pwd',  pwd.length < 8)    && (ok=false);
+  setErr('e-pwd2', 'f-pwd2', pwd !== pwd2)       && (ok=false);
+  if (!cgu) { document.getElementById('e-cgu').classList.add('show'); ok=false; }
+  else document.getElementById('e-cgu').classList.remove('show');
+  return ok;
+}
+function setErr(errId, inputId, condition) {
+  document.getElementById(errId).classList.toggle('show', condition);
+  const el = document.getElementById(inputId);
+  if (el) el.classList.toggle('error', condition);
+  return condition;
+}
+
+// ── Inscription Firebase ──
+async function handleRegister() {
+  if (!validateStep3()) return;
+
+  const email   = document.getElementById('f-email').value.trim();
+  const pwd     = document.getElementById('f-pwd').value;
+  const prenom  = document.getElementById('f-prenom').value.trim();
+  const nom     = document.getElementById('f-nom').value.trim();
+  const tel     = document.getElementById('f-tel').value.trim();
+  const profile = document.getElementById('f-profile').value;
+  const copro   = document.getElementById('f-copro').value.trim();
+  const lot     = document.getElementById('f-lot').value.trim();
+  const logType = document.getElementById('f-type').value;
+
+  setLoading(true);
+  hideAlert();
+
+  try {
+    // 1. Créer le compte Firebase Auth
+    const cred = await auth.createUserWithEmailAndPassword(email, pwd);
+
+    // 2. Mettre à jour le displayName
+    await cred.user.updateProfile({ displayName: `${prenom} ${nom}` });
+
+    // 3. Envoyer l'email de vérification
+    await cred.user.sendEmailVerification();
+
+    // 4. Sauvegarder le profil dans Firestore
+    await db.collection('users').doc(cred.user.uid).set({
+      prenom, nom, email, tel,
+      profile, copro, lot, logType,
+      emailVerified: false,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    showAlert('success','✅',
+      `Compte créé ! Un email de vérification a été envoyé à ${email}. Redirection...`
+    );
+    setTimeout(() => { window.location.href = `dashboard.html?profile=${profile}`; }, 2500);
+
+  } catch (err) {
+    setLoading(false);
+    showAlert('error','⚠️', firebaseErrorMessage(err.code));
+  }
+}
+
+// ── Inscription Google ──
+async function handleGoogleRegister() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  try {
+    const result = await auth.signInWithPopup(provider);
+    const user   = result.user;
+    const isNew  = result.additionalUserInfo.isNewUser;
+
+    if (isNew) {
+      await db.collection('users').doc(user.uid).set({
+        nom:       user.displayName || '',
+        email:     user.email,
+        profile:   'locataire', // profil par défaut, modifiable dans le dashboard
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+    window.location.href = 'dashboard.html?profile=locataire';
+  } catch (err) {
+    if (err.code !== 'auth/popup-closed-by-user') {
+      showAlert('error','⚠️', firebaseErrorMessage(err.code));
+    }
+  }
+}
+
+// ── Force du mot de passe ──
+function checkStrength() {
+  const pwd  = document.getElementById('f-pwd').value;
+  const bars = [document.getElementById('b1'),document.getElementById('b2'),
+                document.getElementById('b3'),document.getElementById('b4')];
+  const txt  = document.getElementById('pwdTxt');
+  bars.forEach(b => b.className='pwd-bar');
+  let score = 0;
+  if (pwd.length >= 6)  score++;
+  if (pwd.length >= 10) score++;
+  if (/[A-Z]/.test(pwd) && /[0-9]/.test(pwd)) score++;
+  if (/[^A-Za-z0-9]/.test(pwd)) score++;
+  const cls    = score<=1 ? 'weak' : score<=2 ? 'medium' : 'strong';
+  const labels = ['','Faible','Moyen','Fort','Très fort'];
+  for (let i=0; i<score; i++) bars[i].classList.add(cls);
+  txt.textContent = score===0 ? 'Entrez un mot de passe' : labels[Math.min(score,4)];
+  txt.style.color = cls==='weak' ? 'var(--danger)' : cls==='medium' ? 'var(--gold)' : 'var(--accent3)';
+}
+
+function togglePwd(inputId, btnId) {
+  const inp = document.getElementById(inputId);
+  const btn = document.getElementById(btnId);
+  inp.type = inp.type==='password' ? 'text' : 'password';
+  btn.textContent = inp.type==='password' ? '👁️' : '🙈';
+}
+
+// ── Messages d'erreur Firebase FR ──
+function firebaseErrorMessage(code) {
+  const map = {
+    'auth/email-already-in-use':  'Cette adresse email est déjà utilisée.',
+    'auth/invalid-email':         'Adresse email invalide.',
+    'auth/weak-password':         'Mot de passe trop faible (minimum 6 caractères).',
+    'auth/network-request-failed':'Erreur réseau. Vérifiez votre connexion.',
+    'auth/popup-blocked':         'La fenêtre popup a été bloquée par votre navigateur.',
+  };
+  return map[code] || 'Une erreur est survenue. Veuillez réessayer.';
+}
+
+// ── Helpers UI ──
+function setLoading(on) {
+  const btn = document.getElementById('btnNext');
+  btn.classList.toggle('loading', on);
+  btn.disabled = on;
+}
+function showAlert(type, icon, msg) {
+  const box = document.getElementById('alertBox');
+  box.className = `alert ${type} show`;
+  document.getElementById('alertIcon').textContent = icon;
+  document.getElementById('alertMsg').textContent  = msg;
+}
+function hideAlert() { document.getElementById('alertBox').classList.remove('show'); }
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
