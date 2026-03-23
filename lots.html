@@ -183,6 +183,91 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text);m
   </div>
 </div>
 
+<!-- MODAL TRANSFERT DE LOT -->
+<div class="modal-overlay" id="transfertModal">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-header">
+      <h2>🔄 Transfert de lot</h2>
+      <button class="modal-close" onclick="closeModal('transfertModal')">✕</button>
+    </div>
+    <input type="hidden" id="t-lotId">
+
+    <!-- Lot concerné -->
+    <div style="background:rgba(56,217,169,.08);border:1px solid rgba(56,217,169,.2);border-radius:10px;padding:.9rem 1.1rem;margin-bottom:1.2rem">
+      <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--accent3);margin-bottom:.3rem">Lot concerné</div>
+      <div id="t-lotInfo" style="font-size:.95rem;font-weight:600;color:var(--text)">—</div>
+      <div id="t-lotProprioActuel" style="font-size:.84rem;color:var(--muted);margin-top:.2rem">—</div>
+    </div>
+
+    <!-- Ancien propriétaire -->
+    <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:.6rem">Étape 1 — Ancien propriétaire</div>
+    <div class="form-group">
+      <label class="form-label">Action sur l'ancien propriétaire</label>
+      <select class="form-select" id="t-actionAncien" onchange="toggleAncienOptions()">
+        <option value="garder">Garder son compte (il reste résident)</option>
+        <option value="supprimer">Supprimer son compte de la copropriété</option>
+      </select>
+    </div>
+
+    <div style="height:1px;background:var(--border);margin:1rem 0"></div>
+
+    <!-- Nouveau propriétaire -->
+    <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:.6rem">Étape 2 — Nouveau propriétaire</div>
+    <div class="form-group">
+      <label class="form-label">Le nouveau propriétaire est :</label>
+      <select class="form-select" id="t-typeNouveau" onchange="toggleNouveauOptions()">
+        <option value="existant">Un résident existant dans la copropriété</option>
+        <option value="nouveau">Une nouvelle personne (créer un compte)</option>
+      </select>
+    </div>
+
+    <!-- Si résident existant -->
+    <div id="t-existantSection">
+      <div class="form-group">
+        <label class="form-label">Sélectionner le résident *</label>
+        <select class="form-select" id="t-residentsSelect">
+          <option value="">-- Choisir un résident --</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Si nouveau -->
+    <div id="t-nouveauSection" style="display:none">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Prénom *</label>
+          <input type="text" class="form-input" id="t-prenom" placeholder="Jean">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nom *</label>
+          <input type="text" class="form-input" id="t-nom" placeholder="Dupont">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email *</label>
+        <input type="email" class="form-input" id="t-email" placeholder="jean@exemple.fr">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Téléphone</label>
+        <input type="tel" class="form-input" id="t-tel" placeholder="+253 77 XX XX XX">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mot de passe temporaire *</label>
+        <input type="text" class="form-input" id="t-pwd" value="Copro2026!">
+      </div>
+    </div>
+
+    <div style="height:1px;background:var(--border);margin:1rem 0"></div>
+
+    <div class="form-group">
+      <label class="form-label">Date de transfert</label>
+      <input type="date" class="form-input" id="t-date">
+    </div>
+
+    <button class="btn-submit" id="btnTransfert" onclick="executerTransfert()">🔄 Confirmer le transfert</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 <script src="sidebar.js"></script>
 <script src="firebase-config.js"></script>
@@ -201,7 +286,7 @@ auth.onAuthStateChanged(async user => {
       buildSidebar(currentProfile, name, user.email, 'lots.html');
     }
   } catch(e) {}
-  if (['syndic','conseil'].includes(currentProfile)) document.getElementById('btnCreate').classList.add('visible');
+  if (currentProfile === 'syndic') document.getElementById('btnCreate').classList.add('visible');
   document.getElementById('ls').style.display='none';
   document.getElementById('sidebar').style.display='flex';
   document.getElementById('mainContent').style.display='block';
@@ -239,7 +324,7 @@ function renderLots() {
   if (q) list=list.filter(l=>(l.numero||'').toLowerCase().includes(q)||(l.proprio||'').toLowerCase().includes(q));
 
   const grid=document.getElementById('lotsGrid');
-  const isSyndic=['syndic','conseil'].includes(currentProfile);
+  const isSyndic = currentProfile === 'syndic';
   if (!list.length) { grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🏢</div><h3>Aucun lot trouvé</h3></div>`; return; }
 
   grid.innerHTML=list.map((l,i)=>`
@@ -254,7 +339,8 @@ function renderLots() {
       </div>
       <div class="lot-footer">
         <span class="lot-status ${l.locataire?'status-occupe':'status-libre'}">${l.locataire?'● Occupé':'● Vacant'}</span>
-        ${isSyndic?`<div style="display:flex;gap:.4rem">
+        ${isSyndic?`<div style="display:flex;gap:.4rem;flex-wrap:wrap">
+          <button class="btn-edit" onclick="openTransfert('${l.id}')" style="border-color:rgba(56,217,169,.3);color:var(--accent3)">🔄 Transférer</button>
           <button class="btn-edit" onclick="openEdit('${l.id}')">✏️ Modifier</button>
           <button class="btn-del" onclick="deleteLot('${l.id}')">🗑️</button>
         </div>`:''}
@@ -308,6 +394,143 @@ async function deleteLot(id) {
   if (!confirm('Supprimer ce lot ?')) return;
   await db.collection('lots').doc(id).delete();
   showToast('🗑️ Lot supprimé.');
+}
+
+// ── Ouvrir modal transfert ──
+async function openTransfert(lotId) {
+  const lot = allLots.find(l => l.id === lotId);
+  if (!lot) return;
+
+  document.getElementById('t-lotId').value    = lotId;
+  document.getElementById('t-lotInfo').textContent = `Lot ${lot.numero} — ${lot.type||'Appartement'} Bât.${lot.batiment||'—'} Étage ${lot.etage??'—'} (${lot.surface||'—'} m²)`;
+  document.getElementById('t-lotProprioActuel').textContent = `Propriétaire actuel : ${lot.proprio||'Non assigné'}`;
+  document.getElementById('t-date').value = new Date().toISOString().slice(0,10);
+
+  // Charger la liste des résidents copropriétaires
+  const usersSnap = await db.collection('users').get();
+  const residents = usersSnap.docs
+    .map(d => ({ uid: d.id, ...d.data() }))
+    .filter(u => ['proprietaire','coproprietaire'].includes(u.profile));
+
+  const select = document.getElementById('t-residentsSelect');
+  select.innerHTML = '<option value="">-- Choisir un résident --</option>' +
+    residents.map(u => `<option value="${u.uid}" data-nom="${u.prenom||''} ${u.nom||''}">${u.prenom||''} ${u.nom||''} (${u.email||''})</option>`).join('');
+
+  openModal('transfertModal');
+}
+
+function toggleNouveauOptions() {
+  const type = document.getElementById('t-typeNouveau').value;
+  document.getElementById('t-existantSection').style.display = type==='existant' ? 'block' : 'none';
+  document.getElementById('t-nouveauSection').style.display  = type==='nouveau'  ? 'block' : 'none';
+}
+
+function toggleAncienOptions() { /* réservé pour extensions futures */ }
+
+// ── Exécuter le transfert ──
+async function executerTransfert() {
+  const lotId        = document.getElementById('t-lotId').value;
+  const actionAncien = document.getElementById('t-actionAncien').value;
+  const typeNouveau  = document.getElementById('t-typeNouveau').value;
+  const dateTransfert = document.getElementById('t-date').value;
+  const lot          = allLots.find(l => l.id === lotId);
+
+  if (!lot) return;
+
+  const btn = document.getElementById('btnTransfert');
+  btn.disabled = true; btn.textContent = 'Transfert en cours...';
+
+  try {
+    let nouveauNom = '';
+    let nouveauUid = '';
+
+    if (typeNouveau === 'existant') {
+      // Résident existant
+      const select = document.getElementById('t-residentsSelect');
+      nouveauUid = select.value;
+      if (!nouveauUid) { showToast('⚠️ Sélectionnez un résident', true); btn.disabled=false; btn.textContent='🔄 Confirmer le transfert'; return; }
+      nouveauNom = select.options[select.selectedIndex].dataset.nom.trim();
+
+      // Mettre à jour le lot de ce résident dans users
+      await db.collection('users').doc(nouveauUid).update({
+        lot: lot.numero,
+        lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+    } else {
+      // Nouveau résident à créer
+      const prenom = document.getElementById('t-prenom').value.trim();
+      const nom    = document.getElementById('t-nom').value.trim();
+      const email  = document.getElementById('t-email').value.trim();
+      const tel    = document.getElementById('t-tel').value.trim();
+      const pwd    = document.getElementById('t-pwd').value;
+
+      if (!prenom || !nom || !email || !pwd) {
+        showToast('⚠️ Remplissez tous les champs obligatoires', true);
+        btn.disabled=false; btn.textContent='🔄 Confirmer le transfert'; return;
+      }
+
+      nouveauNom = `${prenom} ${nom}`;
+
+      // Créer le compte Firebase Auth avec app secondaire
+      const secondApp = firebase.initializeApp(firebase.app().options, 'transfert_' + Date.now());
+      const cred = await secondApp.auth().createUserWithEmailAndPassword(email, pwd);
+      nouveauUid = cred.user.uid;
+      await cred.user.updateProfile({ displayName: nouveauNom });
+
+      await db.collection('users').doc(nouveauUid).set({
+        prenom, nom, email, tel,
+        profile:   'proprietaire',
+        lot:       lot.numero,
+        copro:     lot.copro || '',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        createdBy: currentUser.uid
+      });
+
+      await secondApp.auth().signOut();
+      await secondApp.delete();
+    }
+
+    // Gérer l'ancien propriétaire
+    if (actionAncien === 'supprimer' && lot.proprio) {
+      const ancienSnap = await db.collection('users').where('lot','==', lot.numero).get();
+      for (const doc of ancienSnap.docs) {
+        if (doc.id !== nouveauUid) {
+          await db.collection('users').doc(doc.id).update({ lot: '' });
+        }
+      }
+    }
+
+    // Mettre à jour le lot
+    await db.collection('lots').doc(lotId).update({
+      proprio:        nouveauNom,
+      dateTransfert:  dateTransfert,
+      ancienProprio:  lot.proprio || '',
+    });
+
+    // Historique dans Firestore
+    await db.collection('historique_transferts').add({
+      lotId, lotNumero: lot.numero,
+      ancienProprio: lot.proprio || '—',
+      nouveauProprio: nouveauNom,
+      dateTransfert,
+      createdBy: currentUser.uid,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    closeModal('transfertModal');
+    showToast(`✅ Lot ${lot.numero} transféré à ${nouveauNom} !`);
+
+  } catch(e) {
+    const msgs = {
+      'auth/email-already-in-use': '⚠️ Cet email est déjà utilisé.',
+      'auth/weak-password':        '⚠️ Mot de passe trop faible.',
+      'auth/invalid-email':        '⚠️ Email invalide.',
+    };
+    showToast(msgs[e.code] || '❌ Erreur : ' + e.message, true);
+  } finally {
+    btn.disabled = false; btn.textContent = '🔄 Confirmer le transfert';
+  }
 }
 
 function openModal(id) { document.getElementById(id).classList.add('show'); }

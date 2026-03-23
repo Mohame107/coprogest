@@ -103,11 +103,12 @@ auth.onAuthStateChanged(async user=>{
 });
 
 async function buildSyndic(name){
-  const[lotsS,usersS,incS,bauxS,depS,chargesS]=await Promise.all([
+  const[lotsS,usersS,incS,bauxS,depS,chargesS,demandesS]=await Promise.all([
     db.collection('lots').get(),db.collection('users').get(),
     db.collection('incidents').where('statut','in',['signale','assigne','en_cours']).get(),
     db.collection('baux').where('statut','==','actif').get(),
-    db.collection('depenses').get(),db.collection('charges').get()
+    db.collection('depenses').get(),db.collection('charges').get(),
+    db.collection('demandes').where('statut','==','en_attente').get()
   ]);
   const lots=lotsS.docs.map(d=>d.data()),users=usersS.docs.map(d=>d.data());
   const baux=bauxS.docs.map(d=>d.data()),depenses=depS.docs.map(d=>d.data());
@@ -120,9 +121,11 @@ async function buildSyndic(name){
   const totalC=charges.reduce((s,c)=>s+(c.montant||0),0);
   const totalP=charges.reduce((s,c)=>s+(c.statut==='paye'?c.montant:c.montantPaye||0),0);
   const tauxRec=totalC?Math.round(totalP/totalC*100):92;
+  const nbDemandes=demandesS.size;
   document.getElementById('dashContent').innerHTML=`
     <div class="page-header"><div><div class="page-title">Tableau de bord Syndic</div><div class="page-breadcrumb">Accueil › Dashboard</div></div></div>
     ${abox('info','👋','Bienvenue '+name,'Vue complète de la gestion de la copropriété')}
+    ${nbDemandes>0?`<div style="background:rgba(255,209,102,.08);border:1px solid rgba(255,209,102,.25);border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px">📨</span><div><div style="font-weight:600;font-size:14px;color:var(--yellow)">${nbDemandes} demande(s) d'adhésion en attente</div><div style="font-size:13px;color:var(--text-sub)">Des futurs copropriétaires attendent votre validation</div></div></div><a href="demandes.html"><button class="btn btn-success" style="font-size:13px;padding:7px 14px">Voir les demandes →</button></a></div>`:''}
     <div class="stats-row">
       ${sc('🏢','Lots',lots.length,batiments+' bâtiment(s)','var(--accent)')}
       ${sc('👥','Résidents',users.length,locataires+' locataires','var(--purple)')}
@@ -144,42 +147,91 @@ async function buildSyndic(name){
 }
 
 async function buildCopro(name){
-  const[bauxS,incS,votesS]=await Promise.all([
+  const[bauxS,incS,votesS,lotsS,chargesS]=await Promise.all([
     db.collection('baux').get(),
     db.collection('incidents').get(),
-    db.collection('votes').get()
+    db.collection('votes').get(),
+    db.collection('lots').get(),
+    db.collection('charges').get()
   ]);
-  const allBaux=bauxS.docs.map(d=>d.data());
-  const chargesS=await db.collection('charges').get();
-  const charges=chargesS.docs.map(d=>d.data());
-  const solde=charges.filter(c=>c.statut!=='paye').reduce((s,c)=>s+(c.montant-(c.montantPaye||0)),0);
-  const votesOuverts=votesS.docs.filter(d=>new Date(d.data().dateCloture)>new Date()).length;
-  const lotsS=await db.collection('lots').get();
-  const lots=lotsS.docs.map(d=>d.data()).filter(l=>l.proprio===`${userData.prenom||''} ${userData.nom||''}`.trim());
-  const tantieme=lots.reduce((s,l)=>s+(l.tantieme||0),0)||userData.tantiemes||0;
-  const loues=lots.filter(l=>l.locataire).length;
+
+  // Chercher tous les lots de ce copropriétaire (par nom complet)
+  const monNom = `${userData.prenom||''} ${userData.nom||''}`.trim();
+  const allLots = lotsS.docs.map(d=>({id:d.id,...d.data()}));
+  const mesLots = allLots.filter(l=>
+    l.proprio && (
+      l.proprio.trim() === monNom ||
+      l.proprio.trim().toLowerCase() === monNom.toLowerCase()
+    )
+  );
+
+  // Tantièmes totaux (somme de tous les lots)
+  const tantiemeTotal = mesLots.reduce((s,l)=>s+(parseFloat(l.tantieme)||0),0);
+  const totalTantiemes = allLots.reduce((s,l)=>s+(parseFloat(l.tantieme)||0),0);
+  const pctTantieme = totalTantiemes>0 ? (tantiemeTotal/totalTantiemes*100).toFixed(1) : 0;
+
+  const loues = mesLots.filter(l=>l.locataire).length;
+  const charges = chargesS.docs.map(d=>d.data());
+  const mesCharges = charges.filter(c=>c.proprio && c.proprio.trim().toLowerCase()===monNom.toLowerCase());
+  const solde = mesCharges.filter(c=>c.statut!=='paye').reduce((s,c)=>s+(c.montant-(c.montantPaye||0)),0);
+  const votesOuverts = votesS.docs.filter(d=>new Date(d.data().dateCloture)>new Date()).length;
+
+  // Tableau de mes lots
+  const lotsTableHTML = mesLots.length > 0
+    ? `<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-top:12px">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="background:rgba(59,130,246,.08)">
+            <th style="padding:8px 12px;text-align:left;color:var(--text-sub);font-weight:600">Lot</th>
+            <th style="padding:8px 12px;text-align:left;color:var(--text-sub);font-weight:600">Type</th>
+            <th style="padding:8px 12px;text-align:right;color:var(--text-sub);font-weight:600">Surface</th>
+            <th style="padding:8px 12px;text-align:right;color:var(--text-sub);font-weight:600">Tantièmes</th>
+            <th style="padding:8px 12px;text-align:left;color:var(--text-sub);font-weight:600">Statut</th>
+          </tr></thead>
+          <tbody>
+            ${mesLots.map((l,i)=>`
+              <tr style="${i%2===0?'background:rgba(255,255,255,.02)':''}">
+                <td style="padding:8px 12px;font-weight:700;color:var(--text)">${l.numero||'—'}</td>
+                <td style="padding:8px 12px;color:var(--text-sub)">${l.type||'Appartement'} · Bât.${l.batiment||'—'}</td>
+                <td style="padding:8px 12px;text-align:right;color:var(--text-sub)">${l.surface||'—'} m²</td>
+                <td style="padding:8px 12px;text-align:right;font-weight:600;color:var(--accent)">${l.tantieme||0}</td>
+                <td style="padding:8px 12px"><span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;${l.locataire?'background:rgba(16,185,129,.12);color:#10b981':'background:rgba(148,163,184,.1);color:#94a3b8'}">${l.locataire?'● Loué':'● Vacant'}</span></td>
+              </tr>`).join('')}
+            <tr style="border-top:2px solid var(--border);background:rgba(59,130,246,.05)">
+              <td colspan="3" style="padding:8px 12px;font-weight:700;color:var(--text)">TOTAL (${mesLots.length} lot${mesLots.length>1?'s':''})</td>
+              <td style="padding:8px 12px;text-align:right;font-weight:800;color:var(--accent)">${tantiemeTotal}</td>
+              <td style="padding:8px 12px;font-size:12px;color:var(--text-sub)">${pctTantieme}% de la copropriété</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>`
+    : `<div style="text-align:center;padding:20px;color:var(--text-sub);font-size:13px">Aucun lot assigné à votre nom</div>`;
+
   document.getElementById('dashContent').innerHTML=`
     <div class="page-header"><div><div class="page-title">Tableau de bord</div><div class="page-breadcrumb">Accueil › Dashboard</div></div></div>
     ${solde>0?abox('warning','⚠️','Solde à régulariser',solde.toLocaleString('fr-FR')+' € de charges en attente'):abox('info','🏠','Bienvenue '+name,'Votre espace copropriétaire')}
     <div class="stats-row">
-      ${sc('🏠','Mes lots',lots.length||'—','','var(--accent)')}
-      ${sc('💸','Solde',solde>0?solde.toFixed(2)+' €':'À jour',solde>0?'à payer':'✓ Aucun impayé',solde>0?'var(--red)':'var(--green)')}
-      ${sc('📊','Tantièmes',tantieme||'—','','var(--purple)')}
-      ${sc('🔑','Lots loués',loues,'','var(--green)')}
+      ${sc('🏠','Mes lots',mesLots.length,'',`var(--accent)`)}
+      ${sc('💸','Solde charges',solde>0?solde.toFixed(2)+' €':'À jour',solde>0?'à payer':'✓ Aucun impayé',solde>0?'var(--red)':'var(--green)')}
+      ${sc('📊','Tantièmes',tantiemeTotal,pctTantieme+'% copropriété','var(--purple)')}
+      ${sc('🔑','Lots loués',loues,loues+'/'+mesLots.length,'var(--green)')}
+    </div>
+    <div class="card"><div class="card-header"><span class="card-title">🏠 Mes lots (${mesLots.length})</span><a href="lots.html"><button class="btn btn-ghost" style="font-size:12px">Voir détails →</button></a></div>
+      <div class="card-body">${lotsTableHTML}</div>
     </div>
     <div class="grid2">
       <div class="card"><div class="card-header"><span class="card-title">Actions rapides</span></div><div class="card-body">
         <div style="display:flex;flex-direction:column;gap:8px">
-          <a href="finances.html"><button class="btn btn-ghost">💰 Mon compte</button></a>
-          <a href="lots.html"><button class="btn btn-ghost">🏠 Mes lots</button></a>
-          <a href="vote.html"><button class="btn btn-ghost">🗳️ Prochaine AG${votesOuverts>0?' ('+votesOuverts+' vote(s))':''}</button></a>
-          <a href="incidents.html"><button class="btn btn-ghost">🔧 Signaler incident</button></a>
+          <a href="finances.html"><button class="btn btn-ghost">💰 Mes charges</button></a>
+          <a href="vote.html"><button class="btn btn-ghost">🗳️ Assemblées${votesOuverts>0?' ('+votesOuverts+' vote(s))':''}</button></a>
+          <a href="incidents.html"><button class="btn btn-ghost">🔧 Signaler un incident</button></a>
+          <a href="documents.html"><button class="btn btn-ghost">📄 Mes documents</button></a>
         </div>
       </div></div>
       <div class="card"><div class="card-header"><span class="card-title">Prochaine AG</span></div><div class="card-body">
         ${ir('Votes ouverts',votesOuverts+' résolution(s)')}
-        ${ir('Votre participation',votesOuverts>0?'<span style="color:var(--yellow)">En attente</span>':'<span style="color:var(--green)">À jour</span>')}
-        <div style="margin-top:12px"><a href="vote.html"><button class="btn btn-success" style="width:100%">Voir les votes →</button></a></div>
+        ${ir('Votre pouvoir de vote','<span style="color:var(--accent);font-weight:700">'+tantiemeTotal+' tantièmes</span>')}
+        ${ir('Part de la copropriété','<span style="color:var(--purple)">'+pctTantieme+'%</span>')}
+        <div style="margin-top:12px"><a href="vote.html"><button class="btn btn-success" style="width:100%">Voter →</button></a></div>
       </div></div>
     </div>`;
 }

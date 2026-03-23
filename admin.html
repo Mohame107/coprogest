@@ -295,14 +295,40 @@ function loadResidents() {
     snapshot.forEach(doc => allResidents.push({ uid: doc.id, ...doc.data() }));
     updateStats();
     renderTable();
+    // Charger les multi-lots pour chaque copropriétaire
+    loadMultiLots();
   });
+}
+
+// ── Charger tous les lots et les afficher par propriétaire ──
+async function loadMultiLots() {
+  try {
+    const lotsSnap = await db.collection('lots').get();
+    const lots = lotsSnap.docs.map(d => d.data());
+
+    // Grouper par propriétaire
+    allResidents.forEach(r => {
+      const nomComplet = `${r.prenom||''} ${r.nom||''}`.trim();
+      if (!nomComplet) return;
+      const mesLots = lots.filter(l => l.proprio && l.proprio.trim().toLowerCase() === nomComplet.toLowerCase());
+      const el = document.getElementById(`lots-${r.uid}`);
+      if (!el) return;
+      if (mesLots.length === 0) {
+        el.textContent = r.lot || '—';
+      } else if (mesLots.length === 1) {
+        el.textContent = mesLots[0].numero || r.lot || '—';
+      } else {
+        el.innerHTML = `<span title="${mesLots.map(l=>l.numero).join(', ')}" style="cursor:help;border-bottom:1px dashed var(--muted)">${mesLots.length} lots</span>`;
+      }
+    });
+  } catch(e) {}
 }
 
 // ── Stats ──
 function updateStats() {
   document.getElementById('stTotal').textContent    = allResidents.length;
   document.getElementById('stSyndic').textContent   = allResidents.filter(r=>r.profile==='syndic').length;
-  document.getElementById('stProprio').textContent  = allResidents.filter(r=>r.profile==='proprietaire').length;
+  document.getElementById('stProprio').textContent  = allResidents.filter(r=>['proprietaire','coproprietaire'].includes(r.profile)).length;
   document.getElementById('stConseil').textContent  = allResidents.filter(r=>r.profile==='conseil').length;
   document.getElementById('stLocataire').textContent= allResidents.filter(r=>r.profile==='locataire').length;
 }
@@ -319,7 +345,13 @@ function setFilter(f, btn) {
 function renderTable() {
   const q = document.getElementById('searchInput').value.toLowerCase();
   let list = allResidents;
-  if (currentFilter !== 'all') list = list.filter(r => r.profile === currentFilter);
+  if (currentFilter !== 'all') {
+    if (currentFilter === 'proprietaire') {
+      list = list.filter(r => ['proprietaire','coproprietaire'].includes(r.profile));
+    } else {
+      list = list.filter(r => r.profile === currentFilter);
+    }
+  }
   if (q) list = list.filter(r =>
     (r.prenom||'').toLowerCase().includes(q) ||
     (r.nom||'').toLowerCase().includes(q) ||
@@ -333,9 +365,9 @@ function renderTable() {
     return;
   }
 
-  const profileLabels = {syndic:'🏛️ Syndic',proprietaire:'🏠 Copropriétaire',conseil:'⚖️ Conseil',locataire:'🔑 Locataire'};
-  const profilePills  = {syndic:'pill-syndic',proprietaire:'pill-proprietaire',conseil:'pill-conseil',locataire:'pill-locataire'};
-  const avatarColors  = {syndic:'#5b7fff',proprietaire:'#ffd166',conseil:'#38d9a9',locataire:'#ff6b6b'};
+  const profileLabels = {syndic:'🏛️ Syndic',proprietaire:'🏠 Copropriétaire',coproprietaire:'🏠 Copropriétaire',conseil:'⚖️ Conseil',locataire:'🔑 Locataire'};
+  const profilePills  = {syndic:'pill-syndic',proprietaire:'pill-proprietaire',coproprietaire:'pill-proprietaire',conseil:'pill-conseil',locataire:'pill-locataire'};
+  const avatarColors  = {syndic:'#5b7fff',proprietaire:'#ffd166',coproprietaire:'#ffd166',conseil:'#38d9a9',locataire:'#ff6b6b'};
 
   body.innerHTML = list.map((r,i) => {
     const name = `${r.prenom||''} ${r.nom||''}`.trim() || r.email || '?';
@@ -347,7 +379,7 @@ function renderTable() {
         <div class="resident-name"><strong>${name}</strong><small>${r.copro||'—'}</small></div>
       </div>
       <div style="font-size:.84rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.email||'—'}</div>
-      <div class="lot-cell">${r.lot||'—'}</div>
+      <div class="lot-cell" id="lots-${r.uid}">${r.lot||'—'}</div>
       <div class="tel-cell">${r.tel||'—'}</div>
       <div><span class="profile-pill ${profilePills[r.profile]||''}">${profileLabels[r.profile]||r.profile}</span></div>
       <div class="actions-cell">
@@ -382,7 +414,16 @@ async function saveResident() {
 
   try {
     if (uid) {
-      // ── MODE MODIFICATION (Firestore uniquement) ──
+      // ── MODE MODIFICATION ──
+      // Vérifier unicité si on change vers syndic
+      if (profile === 'syndic' && uid !== currentUser.uid) {
+        const syndicSnap = await db.collection('users').where('profile','==','syndic').get();
+        const autresSyndics = syndicSnap.docs.filter(d => d.id !== uid);
+        if (autresSyndics.length > 0) {
+          showToast('⚠️ Un Syndic existe déjà. Utilisez "Transférer les droits Syndic" dans Mon Profil.', true);
+          btn.disabled = false; btn.textContent = '💾 Enregistrer les modifications'; return;
+        }
+      }
       await db.collection('users').doc(uid).update({
         prenom, nom, tel, lot, profile,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -390,7 +431,14 @@ async function saveResident() {
       showToast('✅ Résident mis à jour !');
     } else {
       // ── MODE CRÉATION ──
-      // Créer le compte Firebase Auth (secondary app pour ne pas déconnecter le Syndic)
+      // Bloquer si on essaie de créer un 2ème Syndic
+      if (profile === 'syndic') {
+        const syndicSnap = await db.collection('users').where('profile','==','syndic').get();
+        if (!syndicSnap.empty) {
+          showToast('⚠️ Un Syndic existe déjà. Utilisez "Transférer les droits Syndic" dans Mon Profil.', true);
+          btn.disabled = false; btn.textContent = '➕ Créer le compte'; return;
+        }
+      }
       const secondaryApp = firebase.initializeApp(firebase.app().options, 'secondary_' + Date.now());
       const secondaryAuth = secondaryApp.auth();
       const cred = await secondaryAuth.createUserWithEmailAndPassword(email, pwd);

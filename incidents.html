@@ -125,9 +125,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text);m
 .toast{position:fixed;bottom:2rem;right:2rem;z-index:1000;background:var(--card2);border:1px solid var(--border);border-left:4px solid var(--accent3);border-radius:12px;padding:1rem 1.4rem;font-size:.88rem;color:var(--text);box-shadow:0 10px 40px rgba(0,0,0,.4);transform:translateX(120%);transition:transform .35s cubic-bezier(.22,1,.36,1);max-width:320px;}
 .toast.show{transform:translateX(0);}
 .toast.error{border-left-color:var(--danger);}
-@media(max-width:900px){.sidebar{display:none;}.main{margin-left:0;padding:1.5rem;}}
-@keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
-@keyframes spin{to{transform:rotate(360deg);}}
+/* ── URGENCE BANNER ── */
+.urgence-banner{display:none;align-items:center;gap:1rem;background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.3);border-left:4px solid var(--danger);border-radius:12px;padding:1rem 1.4rem;margin-bottom:1.5rem;flex-wrap:wrap;}
+.urgence-banner.show{display:flex;}
+.urgence-pulse{width:12px;height:12px;border-radius:50%;background:var(--danger);flex-shrink:0;animation:pulse 1.2s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(1.3);}}
+.urgence-num{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;color:var(--danger);}
+.urgence-call{padding:.5rem 1.1rem;border-radius:8px;border:none;background:var(--danger);color:#fff;font-family:'DM Sans',sans-serif;font-weight:600;font-size:.88rem;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;}
+/* ── MODAL URGENCE ── */
+.urgence-modal{position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity .25s;}
+.urgence-modal.show{opacity:1;pointer-events:all;}
+.urgence-modal-box{background:var(--card2);border:2px solid var(--danger);border-radius:20px;padding:2.5rem;max-width:420px;width:100%;text-align:center;animation:fadeUp .3s ease;}
 </style>
 </head>
 <body>
@@ -137,6 +145,33 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text);m
 <aside class="sidebar" id="sidebar" style="display:none"></aside>
 
 <main class="main" id="mainContent" style="display:none">
+
+  <!-- Bandeau urgence permanent (chargé depuis Firestore) -->
+  <div class="urgence-banner" id="urgenceBanner">
+    <div class="urgence-pulse"></div>
+    <div style="flex:1">
+      <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--danger);margin-bottom:.2rem">Urgence 24h/24</div>
+      <div style="font-size:.88rem;color:var(--muted)">En cas d'urgence, contactez le Syndic directement :</div>
+      <div class="urgence-num" id="urgenceNumDisplay">—</div>
+    </div>
+    <a id="urgenceCallBtn" href="#" class="urgence-call">📞 Appeler</a>
+  </div>
+
+  <!-- Modal urgence (après signalement urgent) -->
+  <div class="urgence-modal" id="urgenceModal">
+    <div class="urgence-modal-box">
+      <div style="font-size:3rem;margin-bottom:1rem">🚨</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.3rem;color:var(--danger);margin-bottom:.5rem">Incident urgent signalé !</div>
+      <div style="font-size:.9rem;color:var(--muted);margin-bottom:1.5rem">Votre incident a été enregistré. Pour une intervention immédiate, contactez le Syndic :</div>
+      <div id="urgenceModalNom" style="font-size:.85rem;color:var(--muted);margin-bottom:.3rem">—</div>
+      <div id="urgenceModalNum" style="font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;color:var(--danger);margin-bottom:1.5rem">—</div>
+      <div style="display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap">
+        <a id="urgenceModalCall" href="#" class="urgence-call" style="font-size:1rem;padding:.7rem 1.5rem">📞 Appeler maintenant</a>
+        <button onclick="closeUrgenceModal()" style="padding:.7rem 1.5rem;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;cursor:pointer;font-size:.88rem">Fermer</button>
+      </div>
+    </div>
+  </div>
+
   <div class="page-header">
     <div>
       <h1>🔧 Incidents & Signalements</h1>
@@ -275,7 +310,36 @@ auth.onAuthStateChanged(async user => {
   document.getElementById('sidebar').style.display = 'flex';
   document.getElementById('mainContent').style.display = 'block';
   loadIncidents();
+  loadUrgenceConfig();
 });
+
+// ── Charger et afficher le numéro d'urgence ──
+async function loadUrgenceConfig() {
+  try {
+    const snap = await db.collection('config').doc('urgence').get();
+    if (snap.exists && snap.data().telephone) {
+      const { telephone, nomSyndic } = snap.data();
+      document.getElementById('urgenceNumDisplay').textContent = telephone;
+      document.getElementById('urgenceCallBtn').href = `tel:${telephone}`;
+      document.getElementById('urgenceBanner').classList.add('show');
+      // Stocker pour usage dans la modal
+      document.getElementById('urgenceBanner').dataset.tel      = telephone;
+      document.getElementById('urgenceBanner').dataset.nom      = nomSyndic || 'Syndic';
+    }
+  } catch(e) {}
+}
+
+// ── Afficher la modal urgence après signalement ──
+function showUrgenceBanner(tel, nom) {
+  document.getElementById('urgenceModalNum').textContent  = tel;
+  document.getElementById('urgenceModalNom').textContent  = nom || 'Syndic';
+  document.getElementById('urgenceModalCall').href        = `tel:${tel}`;
+  document.getElementById('urgenceModal').classList.add('show');
+}
+
+function closeUrgenceModal() {
+  document.getElementById('urgenceModal').classList.remove('show');
+}
 
 function loadIncidents() {
   let query = db.collection('incidents').orderBy('createdAt','desc');
@@ -374,7 +438,25 @@ async function createIncident() {
       suivi: []
     });
     closeModal('createModal');
-    showToast('✅ Incident signalé avec succès !');
+
+    // Afficher le numéro d'urgence si priorité urgente
+    if (prio === 'urgente') {
+      try {
+        const configSnap = await db.collection('config').doc('urgence').get();
+        const num = configSnap.exists ? configSnap.data().telephone : null;
+        const nomSyndic = configSnap.exists ? configSnap.data().nomSyndic : 'le Syndic';
+        if (num) {
+          showUrgenceBanner(num, nomSyndic);
+        } else {
+          showToast('🚨 Incident urgent signalé ! Contactez le Syndic immédiatement.', true);
+        }
+      } catch(e) {
+        showToast('🚨 Incident urgent signalé !', true);
+      }
+    } else {
+      showToast('✅ Incident signalé avec succès !');
+    }
+
     ['i-titre','i-desc','i-lot'].forEach(id => document.getElementById(id).value = '');
   } catch(e) {
     showToast('❌ Erreur lors du signalement', true);

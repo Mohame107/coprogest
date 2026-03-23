@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoproGest — Carnet d'entretien</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{--navy:#0a0f1e;--card:#141d30;--card2:#1a2540;--border:rgba(99,130,255,.15);--accent:#5b7fff;--accent2:#7c5cfc;--accent3:#38d9a9;--text:#e8eaf6;--muted:#8892b0;--danger:#ff6b6b;--gold:#ffd166;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text);min-height:100vh;}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:240px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:50;overflow-y:auto;}
+.nav-section-label{padding:.5rem 1.5rem .25rem;font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:.5rem;}
+.nav-item{display:flex;align-items:center;gap:.75rem;padding:.65rem 1.5rem;color:var(--muted);font-size:.88rem;transition:all .2s;border-left:2px solid transparent;text-decoration:none;}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.03);}
+.nav-item.active{color:var(--text);background:rgba(91,127,255,.1);border-left-color:var(--accent);}
+.nav-icon{font-size:1rem;width:20px;text-align:center;}
+.main{margin-left:240px;padding:2rem 2.5rem;}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem;}
+.page-header h1{font-family:'Syne',sans-serif;font-weight:800;font-size:1.6rem;}
+.page-header p{color:var(--muted);font-size:.92rem;margin-top:.3rem;}
+.header-btns{display:flex;gap:.6rem;flex-wrap:wrap;}
+.btn-create{display:flex;align-items:center;gap:.5rem;padding:.7rem 1.3rem;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-family:'DM Sans',sans-serif;font-weight:600;font-size:.88rem;cursor:pointer;transition:opacity .2s;}
+.btn-create:hover{opacity:.88;}
+.btn-export{display:flex;align-items:center;gap:.5rem;padding:.7rem 1.3rem;border-radius:10px;border:1px solid rgba(56,217,169,.3);background:rgba(56,217,169,.08);color:var(--accent3);font-family:'DM Sans',sans-serif;font-weight:600;font-size:.88rem;cursor:pointer;transition:all .2s;}
+.btn-export:hover{background:rgba(56,217,169,.15);}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:2rem;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.2rem;transition:transform .2s;}
+.stat-card:hover{transform:translateY(-2px);}
+.stat-val{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;}
+.stat-lbl{color:var(--muted);font-size:.78rem;margin-top:.2rem;}
+
+/* Toolbar */
+.toolbar{display:flex;gap:.75rem;margin-bottom:1.5rem;flex-wrap:wrap;align-items:center;}
+.search-wrap{position:relative;flex:1;min-width:200px;}
+.search-icon{position:absolute;left:.9rem;top:50%;transform:translateY(-50%);pointer-events:none;}
+.search-input{width:100%;padding:.7rem 1rem .7rem 2.4rem;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.88rem;}
+.search-input:focus{outline:none;border-color:var(--accent);}
+.search-input::placeholder{color:var(--muted);}
+.filter-btn{padding:.5rem 1rem;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.82rem;cursor:pointer;transition:all .2s;}
+.filter-btn:hover{border-color:rgba(91,127,255,.4);color:var(--text);}
+.filter-btn.active{border-color:var(--accent);background:rgba(91,127,255,.12);color:var(--accent);}
+
+/* Timeline */
+.timeline{position:relative;padding-left:2rem;}
+.timeline::before{content:'';position:absolute;left:.6rem;top:0;bottom:0;width:2px;background:var(--border);}
+.timeline-item{position:relative;margin-bottom:1.5rem;animation:fadeUp .3s ease both;}
+.timeline-dot{position:absolute;left:-1.65rem;top:1rem;width:14px;height:14px;border-radius:50%;border:2px solid var(--card);flex-shrink:0;}
+.dot-entretien{background:var(--accent);}
+.dot-reparation{background:var(--gold);}
+.dot-urgence{background:var(--danger);}
+.dot-renovation{background:var(--accent3);}
+.dot-inspection{background:#a78bfa;}
+.entry-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.3rem;transition:border-color .2s;}
+.entry-card:hover{border-color:rgba(91,127,255,.3);}
+.entry-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.7rem;flex-wrap:wrap;gap:.5rem;}
+.entry-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;}
+.entry-badges{display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;}
+.badge{padding:.2rem .7rem;border-radius:20px;font-size:.72rem;font-weight:600;}
+.badge-entretien{background:rgba(91,127,255,.12);color:var(--accent);}
+.badge-reparation{background:rgba(255,209,102,.12);color:var(--gold);}
+.badge-urgence{background:rgba(255,107,107,.12);color:var(--danger);}
+.badge-renovation{background:rgba(56,217,169,.12);color:var(--accent3);}
+.badge-inspection{background:rgba(167,139,250,.12);color:#a78bfa;}
+.badge-garantie{background:rgba(56,217,169,.08);color:var(--accent3);border:1px solid rgba(56,217,169,.2);}
+.badge-garantie-exp{background:rgba(255,107,107,.08);color:var(--danger);border:1px solid rgba(255,107,107,.2);}
+.entry-desc{font-size:.88rem;color:var(--muted);margin-bottom:.8rem;line-height:1.6;}
+.entry-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.5rem;}
+.meta-item{font-size:.8rem;}
+.meta-label{color:var(--muted);font-size:.72rem;margin-bottom:.1rem;}
+.meta-value{color:var(--text);font-weight:500;}
+.entry-actions{display:flex;gap:.4rem;margin-top:.8rem;padding-top:.7rem;border-top:1px solid var(--border);}
+.btn-sm{padding:.35rem .8rem;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.78rem;cursor:pointer;transition:all .2s;}
+.btn-sm:hover{border-color:var(--accent);color:var(--accent);}
+.btn-sm.danger:hover{border-color:var(--danger);color:var(--danger);}
+.btn-sm.green{border-color:rgba(56,217,169,.3);color:var(--accent3);}
+.btn-sm.green:hover{background:rgba(56,217,169,.1);}
+.empty-state{text-align:center;padding:4rem 2rem;color:var(--muted);}
+.empty-icon{font-size:3rem;margin-bottom:1rem;opacity:.4;}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;padding:1rem;}
+.modal-overlay.show{opacity:1;pointer-events:all;}
+.modal-box{background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:2rem;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;transform:translateY(20px);transition:transform .25s;}
+.modal-overlay.show .modal-box{transform:translateY(0);}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;}
+.modal-header h2{font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;}
+.modal-close{background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;}
+.form-group{margin-bottom:1rem;}
+.form-label{font-size:.75rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem;display:block;}
+.form-input,.form-select,.form-textarea{width:100%;padding:.8rem 1rem;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.9rem;transition:border-color .2s;}
+.form-input:focus,.form-select:focus,.form-textarea:focus{outline:none;border-color:var(--accent);}
+.form-input::placeholder,.form-textarea::placeholder{color:var(--muted);}
+.form-select option{background:var(--card2);}
+.form-textarea{min-height:80px;resize:vertical;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.btn-submit{width:100%;padding:.88rem;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-family:'DM Sans',sans-serif;font-weight:600;font-size:1rem;cursor:pointer;margin-top:.5rem;transition:opacity .2s;}
+.btn-submit:hover{opacity:.9;}
+.btn-submit:disabled{opacity:.5;cursor:not-allowed;}
+.garantie-alerte{background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.2);border-radius:10px;padding:.8rem 1rem;font-size:.84rem;color:var(--danger);display:none;margin-top:.5rem;}
+.garantie-alerte.show{display:block;}
+
+/* Loading & Toast */
+.loading-screen{position:fixed;inset:0;background:var(--navy);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:1rem;}
+.spinner{width:44px;height:44px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+.toast{position:fixed;bottom:2rem;right:2rem;z-index:9999;background:var(--card2);border:1px solid var(--border);border-left:4px solid var(--accent3);border-radius:12px;padding:1rem 1.4rem;font-size:.88rem;color:var(--text);transform:translateX(120%);transition:transform .35s cubic-bezier(.22,1,.36,1);max-width:320px;}
+.toast.show{transform:translateX(0);}
+.toast.error{border-left-color:var(--danger);}
+@media(max-width:900px){.sidebar{display:none;}.main{margin-left:0;padding:1.5rem;}}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+</style>
+</head>
+<body>
+<div class="loading-screen" id="ls"><div class="spinner"></div></div>
+<aside class="sidebar" id="sidebar" style="display:none"></aside>
+
+<main class="main" id="mainContent" style="display:none">
+  <div class="page-header">
+    <div>
+      <h1>📋 Carnet d'entretien</h1>
+      <p>Historique complet des travaux, interventions et inspections de l'immeuble</p>
+    </div>
+    <div class="header-btns">
+      <button class="btn-export" onclick="exportCarnetPDF()">📄 Exporter PDF</button>
+      <button class="btn-create" id="btnCreate" style="display:none" onclick="openModal()">+ Ajouter une entrée</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-card"><div class="stat-val" id="stTotal">0</div><div class="stat-lbl">Total interventions</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--danger)" id="stGarantie">0</div><div class="stat-lbl">Garanties actives</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--gold)" id="stAnnee">0</div><div class="stat-lbl">Cette année</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--accent3)" id="stCout">0</div><div class="stat-lbl">Coût total (€)</div></div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="search-input" id="searchInput" placeholder="Rechercher..." oninput="renderEntries()">
+    </div>
+    <button class="filter-btn active" onclick="setFilter('all',this)">Tous</button>
+    <button class="filter-btn" onclick="setFilter('entretien',this)">🔵 Entretien</button>
+    <button class="filter-btn" onclick="setFilter('reparation',this)">🟡 Réparation</button>
+    <button class="filter-btn" onclick="setFilter('urgence',this)">🔴 Urgence</button>
+    <button class="filter-btn" onclick="setFilter('renovation',this)">🟢 Rénovation</button>
+    <button class="filter-btn" onclick="setFilter('inspection',this)">🟣 Inspection</button>
+  </div>
+
+  <!-- Timeline -->
+  <div class="timeline" id="entriesList"></div>
+</main>
+
+<!-- MODAL AJOUT / EDITION -->
+<div class="modal-overlay" id="entryModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 id="modalTitle">📋 Nouvelle entrée</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <input type="hidden" id="e-id">
+    <div class="form-group">
+      <label class="form-label">Titre *</label>
+      <input type="text" class="form-input" id="e-titre" placeholder="Ex: Ravalement façade bâtiment A">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Type *</label>
+        <select class="form-select" id="e-type">
+          <option value="entretien">🔵 Entretien courant</option>
+          <option value="reparation">🟡 Réparation</option>
+          <option value="urgence">🔴 Urgence</option>
+          <option value="renovation">🟢 Rénovation</option>
+          <option value="inspection">🟣 Inspection / Contrôle</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date d'intervention *</label>
+        <input type="date" class="form-input" id="e-date">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description *</label>
+      <textarea class="form-textarea" id="e-desc" placeholder="Décrivez les travaux effectués..."></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Prestataire</label>
+        <input type="text" class="form-input" id="e-prestataire" placeholder="Nom de l'entreprise">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Coût (€)</label>
+        <input type="number" class="form-input" id="e-cout" placeholder="0" step="0.01" min="0">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Zone concernée</label>
+        <input type="text" class="form-input" id="e-zone" placeholder="Ex: Bât. A, Toiture, Ascenseur...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Prochaine intervention prévue</label>
+        <input type="date" class="form-input" id="e-prochaine">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Garantie (mois)</label>
+        <input type="number" class="form-input" id="e-garantieMois" placeholder="Ex: 24" min="0" oninput="updateGarantieDate()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fin de garantie</label>
+        <input type="date" class="form-input" id="e-garantieFin" readonly style="opacity:.7">
+      </div>
+    </div>
+    <div class="garantie-alerte" id="garantieAlerte">
+      ⚠️ La garantie est déjà expirée ou expire bientôt !
+    </div>
+    <div class="form-group">
+      <label class="form-label">Documents / Liens (URL facture, rapport...)</label>
+      <input type="url" class="form-input" id="e-doc" placeholder="https://...">
+    </div>
+    <button class="btn-submit" id="btnSubmit" onclick="saveEntry()">✅ Enregistrer</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="sidebar.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+let currentUser = null, currentProfile = null;
+let allEntries = [], currentFilter = 'all';
+const isSyndicOrConseil = () => ['syndic','conseil'].includes(currentProfile);
+
+const typeLabels = { entretien:'Entretien', reparation:'Réparation', urgence:'Urgence', renovation:'Rénovation', inspection:'Inspection' };
+const typeDots   = { entretien:'dot-entretien', reparation:'dot-reparation', urgence:'dot-urgence', renovation:'dot-renovation', inspection:'dot-inspection' };
+const typeBadges = { entretien:'badge-entretien', reparation:'badge-reparation', urgence:'badge-urgence', renovation:'badge-renovation', inspection:'badge-inspection' };
+
+auth.onAuthStateChanged(async user => {
+  if (!user) { window.location.href = 'login.html'; return; }
+  currentUser = user;
+  try {
+    const snap = await db.collection('users').doc(user.uid).get();
+    const d = snap.exists ? snap.data() : {};
+    currentProfile = d.profile || 'locataire';
+    const name = d.prenom ? `${d.prenom} ${d.nom||''}`.trim() : user.displayName || user.email.split('@')[0];
+    buildSidebar(currentProfile, name, user.email, 'carnet.html');
+    if (isSyndicOrConseil()) document.getElementById('btnCreate').style.display = 'flex';
+  } catch(e) {}
+
+  document.getElementById('ls').style.display = 'none';
+  document.getElementById('sidebar').style.display = 'flex';
+  document.getElementById('mainContent').style.display = 'block';
+  loadEntries();
+});
+
+function loadEntries() {
+  db.collection('carnet_entretien').orderBy('dateIntervention','desc').onSnapshot(snap => {
+    allEntries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    updateStats();
+    renderEntries();
+  });
+}
+
+function updateStats() {
+  const annee = new Date().getFullYear();
+  const now = new Date();
+  document.getElementById('stTotal').textContent   = allEntries.length;
+  document.getElementById('stGarantie').textContent = allEntries.filter(e => {
+    if (!e.garantieFin) return false;
+    return new Date(e.garantieFin) > now;
+  }).length;
+  document.getElementById('stAnnee').textContent   = allEntries.filter(e =>
+    e.dateIntervention && e.dateIntervention.startsWith(annee.toString())).length;
+  const total = allEntries.reduce((s,e) => s + (parseFloat(e.cout)||0), 0);
+  document.getElementById('stCout').textContent    = total.toLocaleString('fr-FR', { maximumFractionDigits:0 });
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderEntries();
+}
+
+function renderEntries() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  let list = allEntries;
+  if (currentFilter !== 'all') list = list.filter(e => e.type === currentFilter);
+  if (q) list = list.filter(e =>
+    (e.titre||'').toLowerCase().includes(q) ||
+    (e.prestataire||'').toLowerCase().includes(q) ||
+    (e.zone||'').toLowerCase().includes(q) ||
+    (e.description||'').toLowerCase().includes(q)
+  );
+
+  const container = document.getElementById('entriesList');
+  if (!list.length) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><h3>Aucune entrée</h3><p>Le carnet d'entretien est vide.<br>${isSyndicOrConseil()?'Cliquez sur "+ Ajouter" pour commencer.':''}</p></div>`;
+    return;
+  }
+
+  const now = new Date();
+  container.innerHTML = list.map((e, i) => {
+    const dateStr = e.dateIntervention
+      ? new Date(e.dateIntervention).toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' })
+      : '—';
+
+    // Garantie
+    let garantieBadge = '';
+    if (e.garantieFin) {
+      const finDate = new Date(e.garantieFin);
+      const jRestants = Math.floor((finDate - now) / 86400000);
+      if (jRestants > 0) {
+        garantieBadge = `<span class="badge badge-garantie">🛡️ Garantie : ${jRestants}j restants</span>`;
+      } else {
+        garantieBadge = `<span class="badge badge-garantie-exp">🛡️ Garantie expirée</span>`;
+      }
+    }
+
+    // Prochaine intervention
+    let prochaineBadge = '';
+    if (e.prochaineIntervention) {
+      const diff = Math.floor((new Date(e.prochaineIntervention) - now) / 86400000);
+      if (diff <= 30 && diff >= 0) {
+        prochaineBadge = `<span class="badge" style="background:rgba(255,209,102,.12);color:var(--gold)">⏰ Dans ${diff}j</span>`;
+      }
+    }
+
+    const actions = isSyndicOrConseil() ? `
+      <div class="entry-actions">
+        <button class="btn-sm" onclick="openEdit('${e.id}')">✏️ Modifier</button>
+        ${e.docUrl ? `<a href="${e.docUrl}" target="_blank"><button class="btn-sm green">📎 Document</button></a>` : ''}
+        <button class="btn-sm danger" onclick="deleteEntry('${e.id}')">🗑️ Supprimer</button>
+      </div>` : (e.docUrl ? `<div class="entry-actions"><a href="${e.docUrl}" target="_blank"><button class="btn-sm green">📎 Document</button></a></div>` : '');
+
+    return `<div class="timeline-item" style="animation-delay:${i*.04}s">
+      <div class="timeline-dot ${typeDots[e.type]||'dot-entretien'}"></div>
+      <div class="entry-card">
+        <div class="entry-header">
+          <div class="entry-title">${e.titre||'—'}</div>
+          <div class="entry-badges">
+            <span class="badge ${typeBadges[e.type]||''}">${typeLabels[e.type]||e.type}</span>
+            ${garantieBadge}
+            ${prochaineBadge}
+          </div>
+        </div>
+        <div class="entry-desc">${e.description||'—'}</div>
+        <div class="entry-meta">
+          <div class="meta-item"><div class="meta-label">Date</div><div class="meta-value">📅 ${dateStr}</div></div>
+          <div class="meta-item"><div class="meta-label">Prestataire</div><div class="meta-value">🏢 ${e.prestataire||'—'}</div></div>
+          <div class="meta-item"><div class="meta-label">Coût</div><div class="meta-value">💰 ${e.cout ? parseFloat(e.cout).toLocaleString('fr-FR')+' €' : '—'}</div></div>
+          <div class="meta-item"><div class="meta-label">Zone</div><div class="meta-value">📍 ${e.zone||'—'}</div></div>
+          ${e.prochaineIntervention ? `<div class="meta-item"><div class="meta-label">Prochaine intervention</div><div class="meta-value">🔄 ${new Date(e.prochaineIntervention).toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'})}</div></div>` : ''}
+          ${e.garantieFin ? `<div class="meta-item"><div class="meta-label">Fin de garantie</div><div class="meta-value">🛡️ ${new Date(e.garantieFin).toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'})}</div></div>` : ''}
+        </div>
+        ${actions}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Ouvrir modal ajout ──
+function openModal() {
+  document.getElementById('e-id').value = '';
+  document.getElementById('modalTitle').textContent = '📋 Nouvelle entrée';
+  document.getElementById('btnSubmit').textContent = '✅ Enregistrer';
+  document.getElementById('e-date').value = new Date().toISOString().slice(0,10);
+  ['e-titre','e-desc','e-prestataire','e-cout','e-zone','e-prochaine','e-garantieMois','e-garantieFin','e-doc'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('e-type').value = 'entretien';
+  document.getElementById('garantieAlerte').classList.remove('show');
+  document.getElementById('entryModal').classList.add('show');
+}
+
+// ── Ouvrir modal édition ──
+function openEdit(id) {
+  const e = allEntries.find(x => x.id === id);
+  if (!e) return;
+  document.getElementById('e-id').value            = id;
+  document.getElementById('modalTitle').textContent = '✏️ Modifier l\'entrée';
+  document.getElementById('btnSubmit').textContent  = '💾 Enregistrer les modifications';
+  document.getElementById('e-titre').value          = e.titre || '';
+  document.getElementById('e-type').value           = e.type || 'entretien';
+  document.getElementById('e-date').value           = e.dateIntervention || '';
+  document.getElementById('e-desc').value           = e.description || '';
+  document.getElementById('e-prestataire').value    = e.prestataire || '';
+  document.getElementById('e-cout').value           = e.cout || '';
+  document.getElementById('e-zone').value           = e.zone || '';
+  document.getElementById('e-prochaine').value      = e.prochaineIntervention || '';
+  document.getElementById('e-garantieMois').value   = e.garantieMois || '';
+  document.getElementById('e-garantieFin').value    = e.garantieFin || '';
+  document.getElementById('e-doc').value            = e.docUrl || '';
+  document.getElementById('entryModal').classList.add('show');
+}
+
+function closeModal() { document.getElementById('entryModal').classList.remove('show'); }
+
+// ── Calculer la date de fin de garantie ──
+function updateGarantieDate() {
+  const mois = parseInt(document.getElementById('e-garantieMois').value);
+  const dateInt = document.getElementById('e-date').value;
+  if (!mois || !dateInt) { document.getElementById('e-garantieFin').value = ''; return; }
+
+  const debut = new Date(dateInt);
+  debut.setMonth(debut.getMonth() + mois);
+  const finStr = debut.toISOString().slice(0, 10);
+  document.getElementById('e-garantieFin').value = finStr;
+
+  // Alerte si garantie déjà expirée
+  const alerte = document.getElementById('garantieAlerte');
+  if (debut < new Date()) alerte.classList.add('show');
+  else alerte.classList.remove('show');
+}
+
+// ── Sauvegarder une entrée ──
+async function saveEntry() {
+  const id          = document.getElementById('e-id').value;
+  const titre       = document.getElementById('e-titre').value.trim();
+  const type        = document.getElementById('e-type').value;
+  const dateInt     = document.getElementById('e-date').value;
+  const desc        = document.getElementById('e-desc').value.trim();
+  const prestataire = document.getElementById('e-prestataire').value.trim();
+  const cout        = parseFloat(document.getElementById('e-cout').value) || 0;
+  const zone        = document.getElementById('e-zone').value.trim();
+  const prochaine   = document.getElementById('e-prochaine').value;
+  const garantieMois= parseInt(document.getElementById('e-garantieMois').value) || 0;
+  const garantieFin = document.getElementById('e-garantieFin').value;
+  const docUrl      = document.getElementById('e-doc').value.trim();
+
+  if (!titre || !dateInt || !desc) { showToast('⚠️ Titre, date et description obligatoires', true); return; }
+
+  const btn = document.getElementById('btnSubmit');
+  btn.disabled = true; btn.textContent = 'Enregistrement...';
+
+  const data = {
+    titre, type, dateIntervention: dateInt, description: desc,
+    prestataire, cout, zone, garantieMois, garantieFin, docUrl,
+    prochaineIntervention: prochaine,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  try {
+    if (id) {
+      await db.collection('carnet_entretien').doc(id).update(data);
+      showToast('✅ Entrée mise à jour !');
+    } else {
+      data.createdBy = currentUser.uid;
+      data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection('carnet_entretien').add(data);
+      showToast('✅ Entrée ajoutée au carnet !');
+    }
+    closeModal();
+  } catch(e) {
+    showToast('❌ Erreur : ' + e.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = id ? '💾 Enregistrer les modifications' : '✅ Enregistrer';
+  }
+}
+
+// ── Supprimer ──
+async function deleteEntry(id) {
+  if (!confirm('Supprimer cette entrée du carnet ?')) return;
+  await db.collection('carnet_entretien').doc(id).delete();
+  showToast('🗑️ Entrée supprimée.');
+}
+
+// ── Export PDF du carnet complet ──
+async function exportCarnetPDF() {
+  if (!allEntries.length) { showToast('⚠️ Aucune entrée à exporter', true); return; }
+  showToast('📄 Génération du PDF...');
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  const pageW = 210, margin = 20, cw = pageW - 2*margin;
+  const DARK=[30,58,95], BLUE=[37,99,235], GRAY=[104,117,141], WHITE=[255,255,255], LIGHT=[239,246,255];
+  const GREEN=[22,163,74], RED=[220,38,38], GOLD=[217,119,6], PURPLE=[124,58,236];
+  const typeColors = { entretien:BLUE, reparation:GOLD, urgence:RED, renovation:GREEN, inspection:PURPLE };
+
+  let y = 0;
+
+  const addPage = () => { doc.addPage(); y = 20; };
+  const checkY = (needed=30) => { if (y + needed > 270) addPage(); };
+
+  // En-tête
+  doc.setFillColor(...DARK);
+  doc.rect(0,0,pageW,40,'F');
+  doc.setTextColor(...WHITE);
+  doc.setFontSize(20); doc.setFont('helvetica','bold');
+  doc.text('CoproGest — Carnet d\'entretien', margin, 18);
+  doc.setFontSize(10); doc.setFont('helvetica','normal');
+  doc.setTextColor(180,196,230);
+  doc.text(`Genere le ${new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'})}  |  ${allEntries.length} intervention(s)`, margin, 30);
+  y = 52;
+
+  // Stats résumé
+  const totalCout = allEntries.reduce((s,e)=>s+(parseFloat(e.cout)||0),0);
+  const garantiesActives = allEntries.filter(e=>e.garantieFin && new Date(e.garantieFin)>new Date()).length;
+  doc.setFillColor(...LIGHT);
+  doc.roundedRect(margin, y, cw, 18, 2, 2, 'F');
+  doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(...GRAY);
+  doc.text(`Total interventions : ${allEntries.length}`, margin+4, y+7);
+  doc.text(`Cout total : ${totalCout.toLocaleString('fr-FR')} EUR`, margin+60, y+7);
+  doc.text(`Garanties actives : ${garantiesActives}`, margin+120, y+7);
+  doc.text(`Annee en cours : ${allEntries.filter(e=>e.dateIntervention?.startsWith(new Date().getFullYear().toString())).length}`, margin+4, y+14);
+  y += 26;
+
+  // Entrées
+  allEntries.forEach((e, idx) => {
+    checkY(50);
+    const color = typeColors[e.type] || BLUE;
+    const dateStr = e.dateIntervention
+      ? new Date(e.dateIntervention).toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'})
+      : '—';
+
+    // Badge type
+    doc.setFillColor(...color);
+    doc.roundedRect(margin, y, 28, 8, 2, 2, 'F');
+    doc.setTextColor(...WHITE);
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text((typeLabels[e.type]||e.type).toUpperCase(), margin+14, y+5.5, {align:'center'});
+
+    // Titre
+    doc.setFontSize(11); doc.setFont('helvetica','bold'); doc.setTextColor(...DARK);
+    doc.text(e.titre||'—', margin+32, y+6);
+
+    // Date
+    doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(...GRAY);
+    doc.text(dateStr, pageW-margin, y+6, {align:'right'});
+    y += 12;
+
+    // Description
+    const descLines = doc.splitTextToSize(e.description||'—', cw);
+    doc.setFontSize(9); doc.setTextColor(...GRAY);
+    doc.text(descLines.slice(0,3), margin, y);
+    y += Math.min(descLines.length,3) * 5 + 3;
+
+    // Métadonnées
+    const metas = [];
+    if (e.prestataire) metas.push(`Prestataire : ${e.prestataire}`);
+    if (e.cout)        metas.push(`Cout : ${parseFloat(e.cout).toLocaleString('fr-FR')} EUR`);
+    if (e.zone)        metas.push(`Zone : ${e.zone}`);
+    if (e.garantieFin) metas.push(`Garantie jusqu\'au : ${new Date(e.garantieFin).toLocaleDateString('fr-FR')}`);
+
+    if (metas.length) {
+      doc.setFontSize(8); doc.setTextColor(150,160,180);
+      doc.text(metas.join('  |  '), margin, y);
+      y += 6;
+    }
+
+    // Séparateur
+    doc.setDrawColor(220,226,236); doc.setLineWidth(0.3);
+    doc.line(margin, y, margin+cw, y);
+    y += 6;
+  });
+
+  // Pied de page
+  const pageCount = doc.getNumberOfPages();
+  for (let i=1; i<=pageCount; i++) {
+    doc.setPage(i);
+    doc.setFillColor(...DARK);
+    doc.rect(0,285,pageW,12,'F');
+    doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(180,196,230);
+    doc.text('CoproGest — Carnet d\'entretien  |  Document confidentiel', margin, 293);
+    doc.text(`Page ${i}/${pageCount}`, pageW-margin, 293, {align:'right'});
+  }
+
+  doc.save(`Carnet_Entretien_${new Date().toISOString().slice(0,10)}.pdf`);
+  showToast('✅ Carnet exporté en PDF !');
+}
+
+let toastTimer;
+function showToast(msg, isErr=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show'+(isErr?' error':'');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 4000);
+}
+</script>
+</body>
+</html>

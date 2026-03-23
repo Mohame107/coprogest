@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoproGest — Messages</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+:root{--navy:#0a0f1e;--card:#141d30;--card2:#1a2540;--border:rgba(99,130,255,.15);--accent:#5b7fff;--accent2:#7c5cfc;--accent3:#38d9a9;--text:#e8eaf6;--muted:#8892b0;--danger:#ff6b6b;--gold:#ffd166;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text);min-height:100vh;overflow:hidden;}
+
+/* ── SIDEBAR ── */
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:240px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:50;overflow-y:auto;}
+.nav-section-label{padding:.5rem 1.5rem .25rem;font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:.5rem;}
+.nav-item{display:flex;align-items:center;gap:.75rem;padding:.65rem 1.5rem;color:var(--muted);font-size:.88rem;transition:all .2s;border-left:2px solid transparent;text-decoration:none;}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.03);}
+.nav-item.active{color:var(--text);background:rgba(91,127,255,.1);border-left-color:var(--accent);}
+.nav-icon{font-size:1rem;width:20px;text-align:center;}
+
+/* ── LAYOUT MESSAGES ── */
+.msg-layout{margin-left:240px;display:grid;grid-template-columns:300px 1fr;height:100vh;}
+
+/* ── LISTE DES CONVERSATIONS ── */
+.conv-panel{background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.conv-header{padding:1.2rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.conv-header h2{font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;}
+.btn-new-conv{padding:.45rem .9rem;border-radius:8px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-family:'DM Sans',sans-serif;font-size:.8rem;font-weight:600;cursor:pointer;}
+.conv-search{padding:.7rem 1rem;border-bottom:1px solid var(--border);flex-shrink:0;}
+.conv-search input{width:100%;padding:.55rem .9rem;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.84rem;}
+.conv-search input:focus{outline:none;border-color:var(--accent);}
+.conv-search input::placeholder{color:var(--muted);}
+.conv-list{flex:1;overflow-y:auto;}
+.conv-item{display:flex;align-items:center;gap:.75rem;padding:.9rem 1rem;cursor:pointer;transition:background .15s;border-bottom:1px solid rgba(99,130,255,.06);position:relative;}
+.conv-item:hover{background:rgba(255,255,255,.03);}
+.conv-item.active{background:rgba(91,127,255,.1);border-left:2px solid var(--accent);}
+.conv-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;color:#fff;flex-shrink:0;}
+.conv-info{flex:1;min-width:0;}
+.conv-name{font-size:.88rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.conv-last{font-size:.76rem;color:var(--muted);margin-top:.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.conv-meta{display:flex;flex-direction:column;align-items:flex-end;gap:.25rem;flex-shrink:0;}
+.conv-time{font-size:.72rem;color:var(--muted);}
+.conv-badge{width:18px;height:18px;border-radius:50%;background:var(--accent);color:#fff;font-size:.68rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.conv-empty{text-align:center;padding:3rem 1rem;color:var(--muted);font-size:.88rem;}
+
+/* ── ZONE DE CHAT ── */
+.chat-panel{display:flex;flex-direction:column;overflow:hidden;}
+.chat-header{padding:1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.9rem;flex-shrink:0;background:var(--card);}
+.chat-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;color:#fff;flex-shrink:0;}
+.chat-name{font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;}
+.chat-role{font-size:.76rem;color:var(--muted);}
+.chat-messages{flex:1;overflow-y:auto;padding:1.2rem 1.5rem;display:flex;flex-direction:column;gap:.6rem;}
+.msg-bubble{max-width:68%;padding:.7rem 1rem;border-radius:14px;font-size:.88rem;line-height:1.5;position:relative;word-wrap:break-word;}
+.msg-bubble.sent{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;align-self:flex-end;border-bottom-right-radius:4px;}
+.msg-bubble.recv{background:var(--card2);color:var(--text);align-self:flex-start;border-bottom-left-radius:4px;border:1px solid var(--border);}
+.msg-time{font-size:.68rem;opacity:.65;margin-top:.3rem;text-align:right;}
+.msg-time.recv{text-align:left;}
+.msg-sender{font-size:.72rem;color:var(--accent3);font-weight:600;margin-bottom:.2rem;}
+.chat-footer{padding:1rem 1.5rem;border-top:1px solid var(--border);background:var(--card);flex-shrink:0;}
+.chat-input-wrap{display:flex;gap:.7rem;align-items:flex-end;}
+.chat-input{flex:1;padding:.75rem 1rem;background:var(--card2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.88rem;resize:none;max-height:120px;transition:border-color .2s;line-height:1.5;}
+.chat-input:focus{outline:none;border-color:var(--accent);}
+.chat-input::placeholder{color:var(--muted);}
+.btn-send{width:42px;height:42px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:1.1rem;cursor:pointer;transition:opacity .2s;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.btn-send:hover{opacity:.85;}
+.btn-send:disabled{opacity:.4;cursor:not-allowed;}
+.chat-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;color:var(--muted);}
+.chat-empty-icon{font-size:3.5rem;opacity:.3;}
+
+/* ── MODAL NOUVELLE CONV ── */
+.modal-overlay{position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;padding:1rem;}
+.modal-overlay.show{opacity:1;pointer-events:all;}
+.modal-box{background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:2rem;max-width:460px;width:100%;}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;}
+.modal-header h2{font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;}
+.modal-close{background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;}
+.form-group{margin-bottom:1rem;}
+.form-label{font-size:.75rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem;display:block;}
+.form-select,.form-input{width:100%;padding:.8rem 1rem;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.9rem;}
+.form-select:focus,.form-input:focus{outline:none;border-color:var(--accent);}
+.form-select option{background:var(--card2);}
+.btn-submit{width:100%;padding:.88rem;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-family:'DM Sans',sans-serif;font-weight:600;font-size:1rem;cursor:pointer;margin-top:.5rem;}
+
+/* ── MISC ── */
+.loading-screen{position:fixed;inset:0;background:var(--navy);display:flex;align-items:center;justify-content:center;z-index:9999;}
+.spinner{width:44px;height:44px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+.toast{position:fixed;bottom:2rem;right:2rem;z-index:9999;background:var(--card2);border:1px solid var(--border);border-left:4px solid var(--accent3);border-radius:12px;padding:1rem 1.4rem;font-size:.88rem;color:var(--text);transform:translateX(120%);transition:transform .35s cubic-bezier(.22,1,.36,1);max-width:320px;}
+.toast.show{transform:translateX(0);}
+.toast.error{border-left-color:var(--danger);}
+.date-separator{text-align:center;font-size:.72rem;color:var(--muted);padding:.4rem 0;position:relative;}
+.date-separator::before,.date-separator::after{content:'';position:absolute;top:50%;width:30%;height:1px;background:var(--border);}
+.date-separator::before{left:5%;}
+.date-separator::after{right:5%;}
+@media(max-width:900px){.sidebar{display:none;}.msg-layout{margin-left:0;grid-template-columns:260px 1fr;}}
+@media(max-width:600px){.msg-layout{grid-template-columns:1fr;}.conv-panel{display:none;}.conv-panel.show{display:flex;position:fixed;inset:0;z-index:100;width:100%;}}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+</style>
+</head>
+<body>
+<div class="loading-screen" id="ls"><div class="spinner"></div></div>
+<aside class="sidebar" id="sidebar" style="display:none"></aside>
+
+<div class="msg-layout" id="msgLayout" style="display:none">
+
+  <!-- Panneau conversations -->
+  <div class="conv-panel">
+    <div class="conv-header">
+      <h2>💬 Messages</h2>
+      <button class="btn-new-conv" onclick="openNewConv()" id="btnNewConv" style="display:none">+ Nouveau</button>
+    </div>
+    <div class="conv-search">
+      <input type="text" id="convSearch" placeholder="Rechercher..." oninput="filterConversations()">
+    </div>
+    <div class="conv-list" id="convList">
+      <div class="conv-empty">Chargement des conversations...</div>
+    </div>
+  </div>
+
+  <!-- Zone chat -->
+  <div class="chat-panel" id="chatPanel">
+    <div class="chat-empty" id="chatEmpty">
+      <div class="chat-empty-icon">💬</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;color:var(--text)">Vos messages</div>
+      <div style="font-size:.88rem;text-align:center">Sélectionnez une conversation<br>ou démarrez-en une nouvelle</div>
+    </div>
+    <div id="chatActive" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+      <div class="chat-header" id="chatHeader"></div>
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="chat-footer">
+        <div class="chat-input-wrap">
+          <textarea class="chat-input" id="msgInput" placeholder="Écrire un message..." rows="1"
+            oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
+          <button class="btn-send" onclick="sendMessage()" id="btnSend">➤</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal nouvelle conversation -->
+<div class="modal-overlay" id="newConvModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>💬 Nouvelle conversation</h2>
+      <button class="modal-close" onclick="closeNewConv()">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Destinataire *</label>
+      <select class="form-select" id="newConvDest"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Sujet *</label>
+      <input type="text" class="form-input" id="newConvSujet" placeholder="Ex: Question sur mes charges...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Premier message *</label>
+      <textarea class="form-input" id="newConvMsg" placeholder="Votre message..." style="min-height:80px;resize:vertical"></textarea>
+    </div>
+    <button class="btn-submit" onclick="creerConversation()">💬 Démarrer la conversation</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="sidebar.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+let currentUser = null;
+let currentProfile = null;
+let currentUserName = '';
+let allConversations = [];
+let currentConvId = null;
+let unsubMessages = null;
+const avatarColors = {
+  syndic:'#5b7fff', proprietaire:'#ffd166', coproprietaire:'#ffd166',
+  conseil:'#38d9a9', locataire:'#ff6b6b'
+};
+const profileLabels = {
+  syndic:'Syndic', proprietaire:'Copropriétaire', coproprietaire:'Copropriétaire',
+  conseil:'Conseil Syndical', locataire:'Locataire'
+};
+
+auth.onAuthStateChanged(async user => {
+  if (!user) { window.location.href = 'login.html'; return; }
+  currentUser = user;
+  try {
+    const snap = await db.collection('users').doc(user.uid).get();
+    const d = snap.exists ? snap.data() : {};
+    currentProfile = d.profile || 'locataire';
+    currentUserName = d.prenom ? `${d.prenom} ${d.nom||''}`.trim() : user.displayName || user.email.split('@')[0];
+    buildSidebar(currentProfile, currentUserName, user.email, 'messages.html');
+    // Bouton "Nouveau" visible pour tous
+    document.getElementById('btnNewConv').style.display = 'flex';
+  } catch(e) {}
+
+  document.getElementById('ls').style.display = 'none';
+  document.getElementById('sidebar').style.display = 'flex';
+  document.getElementById('msgLayout').style.display = 'grid';
+  loadConversations();
+});
+
+// ── Charger toutes les conversations de l'utilisateur ──
+function loadConversations() {
+  db.collection('conversations')
+    .where('participants', 'array-contains', currentUser.uid)
+    .orderBy('lastMessageAt', 'desc')
+    .onSnapshot(snap => {
+      allConversations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderConversations();
+    });
+}
+
+function renderConversations(filter = '') {
+  const list = document.getElementById('convList');
+  let convs = allConversations;
+  if (filter) convs = convs.filter(c =>
+    (c.sujet||'').toLowerCase().includes(filter) ||
+    (c.participantNames||[]).some(n => n.toLowerCase().includes(filter))
+  );
+
+  if (!convs.length) {
+    list.innerHTML = `<div class="conv-empty">Aucune conversation.<br>Cliquez sur "+ Nouveau" pour commencer.</div>`;
+    return;
+  }
+
+  list.innerHTML = convs.map(c => {
+    const autreUid   = c.participants.find(p => p !== currentUser.uid);
+    const autreNom   = c.participantNames?.find((_, i) => c.participants[i] !== currentUser.uid) || '—';
+    const autreProfil = c.participantProfiles?.find((_, i) => c.participants[i] !== currentUser.uid) || 'locataire';
+    const initiale   = autreNom.charAt(0).toUpperCase();
+    const color      = avatarColors[autreProfil] || '#5b7fff';
+    const nonLus     = (c.nonLus || {})[currentUser.uid] || 0;
+    const dateStr    = c.lastMessageAt?.toDate
+      ? formatDate(c.lastMessageAt.toDate()) : '';
+    const isActive   = c.id === currentConvId;
+
+    return `<div class="conv-item ${isActive ? 'active' : ''}" onclick="ouvrirConversation('${c.id}')">
+      <div class="conv-avatar" style="background:linear-gradient(135deg,${color},${color}99)">${initiale}</div>
+      <div class="conv-info">
+        <div class="conv-name">${autreNom}</div>
+        <div class="conv-last">${c.sujet || c.lastMessage || '—'}</div>
+      </div>
+      <div class="conv-meta">
+        <div class="conv-time">${dateStr}</div>
+        ${nonLus > 0 ? `<div class="conv-badge">${nonLus}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterConversations() {
+  renderConversations(document.getElementById('convSearch').value.toLowerCase());
+}
+
+// ── Ouvrir une conversation ──
+async function ouvrirConversation(convId) {
+  currentConvId = convId;
+  const conv = allConversations.find(c => c.id === convId);
+  if (!conv) return;
+
+  // Marquer comme lu
+  const nonLus = { ...conv.nonLus };
+  nonLus[currentUser.uid] = 0;
+  db.collection('conversations').doc(convId).update({ nonLus });
+
+  // Afficher le header
+  const autreNom    = conv.participantNames?.find((_, i) => conv.participants[i] !== currentUser.uid) || '—';
+  const autreProfil = conv.participantProfiles?.find((_, i) => conv.participants[i] !== currentUser.uid) || 'locataire';
+  const color       = avatarColors[autreProfil] || '#5b7fff';
+  document.getElementById('chatHeader').innerHTML = `
+    <div class="chat-avatar" style="background:linear-gradient(135deg,${color},${color}99)">${autreNom.charAt(0).toUpperCase()}</div>
+    <div>
+      <div class="chat-name">${autreNom}</div>
+      <div class="chat-role">${profileLabels[autreProfil]||autreProfil} · ${conv.sujet||''}</div>
+    </div>`;
+
+  document.getElementById('chatEmpty').style.display  = 'none';
+  document.getElementById('chatActive').style.display = 'flex';
+  renderConversations();
+
+  // Écouter les messages en temps réel
+  if (unsubMessages) unsubMessages();
+  unsubMessages = db.collection('conversations').doc(convId)
+    .collection('messages').orderBy('createdAt', 'asc')
+    .onSnapshot(snap => {
+      renderMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+}
+
+// ── Afficher les messages ──
+function renderMessages(messages) {
+  const container = document.getElementById('chatMessages');
+  if (!messages.length) {
+    container.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:.85rem;margin-top:2rem">Début de la conversation</div>`;
+    return;
+  }
+
+  let lastDate = '';
+  container.innerHTML = messages.map(m => {
+    const isSent  = m.senderId === currentUser.uid;
+    const date    = m.createdAt?.toDate ? m.createdAt.toDate() : new Date();
+    const dateDay = date.toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
+    const timeStr = date.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+    let sep = '';
+    if (dateDay !== lastDate) {
+      sep = `<div class="date-separator">${dateDay}</div>`;
+      lastDate = dateDay;
+    }
+    return `${sep}<div style="display:flex;flex-direction:column;animation:fadeUp .2s ease both">
+      ${!isSent ? `<div class="msg-sender">${m.senderName||'—'}</div>` : ''}
+      <div class="msg-bubble ${isSent ? 'sent' : 'recv'}">${escapeHtml(m.texte)}
+        <div class="msg-time ${isSent?'':'recv'}">${timeStr}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Scroller vers le bas
+  container.scrollTop = container.scrollHeight;
+}
+
+// ── Envoyer un message ──
+async function sendMessage() {
+  const texte = document.getElementById('msgInput').value.trim();
+  if (!texte || !currentConvId) return;
+
+  document.getElementById('msgInput').value = '';
+  document.getElementById('msgInput').style.height = 'auto';
+  document.getElementById('btnSend').disabled = true;
+
+  try {
+    const batch = db.batch();
+    const conv  = allConversations.find(c => c.id === currentConvId);
+    const autreUid = conv?.participants.find(p => p !== currentUser.uid);
+
+    // Ajouter le message
+    const msgRef = db.collection('conversations').doc(currentConvId).collection('messages').doc();
+    batch.set(msgRef, {
+      texte,
+      senderId:   currentUser.uid,
+      senderName: currentUserName,
+      createdAt:  firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // Mettre à jour la conversation
+    const nonLus = { ...conv?.nonLus };
+    if (autreUid) nonLus[autreUid] = (nonLus[autreUid] || 0) + 1;
+    batch.update(db.collection('conversations').doc(currentConvId), {
+      lastMessage:   texte.substring(0, 60),
+      lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
+      lastSenderId:  currentUser.uid,
+      nonLus
+    });
+
+    await batch.commit();
+  } catch(e) {
+    showToast('❌ Erreur envoi : ' + e.message, true);
+  } finally {
+    document.getElementById('btnSend').disabled = false;
+    document.getElementById('msgInput').focus();
+  }
+}
+
+// ── Créer une nouvelle conversation ──
+async function creerConversation() {
+  const destUid = document.getElementById('newConvDest').value;
+  const sujet   = document.getElementById('newConvSujet').value.trim();
+  const msg     = document.getElementById('newConvMsg').value.trim();
+
+  if (!destUid || !sujet || !msg) { showToast('⚠️ Remplissez tous les champs', true); return; }
+
+  try {
+    // Vérifier si conversation existante entre ces 2 utilisateurs
+    const destSnap = await db.collection('users').doc(destUid).get();
+    const destData = destSnap.data();
+    const destNom  = destData.prenom ? `${destData.prenom} ${destData.nom||''}`.trim() : destData.email;
+
+    // Chercher conversation existante
+    const existSnap = await db.collection('conversations')
+      .where('participants', 'array-contains', currentUser.uid).get();
+    const existing = existSnap.docs.find(d => d.data().participants.includes(destUid) && d.data().sujet === sujet);
+
+    let convId;
+    if (existing) {
+      convId = existing.id;
+    } else {
+      // Créer nouvelle conversation
+      const convRef = await db.collection('conversations').add({
+        participants:       [currentUser.uid, destUid],
+        participantNames:   [currentUserName, destNom],
+        participantProfiles:[currentProfile, destData.profile||'locataire'],
+        sujet,
+        lastMessage:        msg.substring(0, 60),
+        lastMessageAt:      firebase.firestore.FieldValue.serverTimestamp(),
+        lastSenderId:       currentUser.uid,
+        nonLus: { [destUid]: 1, [currentUser.uid]: 0 },
+        createdAt:          firebase.firestore.FieldValue.serverTimestamp()
+      });
+      convId = convRef.id;
+    }
+
+    // Ajouter le premier message
+    await db.collection('conversations').doc(convId).collection('messages').add({
+      texte:      msg,
+      senderId:   currentUser.uid,
+      senderName: currentUserName,
+      createdAt:  firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    closeNewConv();
+    showToast('✅ Conversation démarrée !');
+    setTimeout(() => ouvrirConversation(convId), 500);
+  } catch(e) {
+    showToast('❌ Erreur : ' + e.message, true);
+  }
+}
+
+// ── Ouvrir modal nouvelle conv ──
+async function openNewConv() {
+  // Charger la liste des destinataires selon le profil
+  const snap = await db.collection('users').get();
+  const users = snap.docs
+    .map(d => ({ uid: d.id, ...d.data() }))
+    .filter(u => {
+      if (u.uid === currentUser.uid) return false;
+      // Locataire → Syndic uniquement
+      if (currentProfile === 'locataire') return u.profile === 'syndic';
+      // Copropriétaire → Syndic et Conseil
+      if (['proprietaire','coproprietaire'].includes(currentProfile)) return ['syndic','conseil'].includes(u.profile);
+      // Syndic/Conseil → tout le monde
+      return true;
+    });
+
+  const select = document.getElementById('newConvDest');
+  select.innerHTML = '<option value="">-- Choisir un destinataire --</option>' +
+    users.map(u => {
+      const nom = `${u.prenom||''} ${u.nom||''}`.trim() || u.email;
+      return `<option value="${u.uid}">${nom} — ${profileLabels[u.profile]||u.profile}</option>`;
+    }).join('');
+
+  document.getElementById('newConvModal').classList.add('show');
+}
+
+function closeNewConv() {
+  document.getElementById('newConvModal').classList.remove('show');
+  document.getElementById('newConvSujet').value = '';
+  document.getElementById('newConvMsg').value = '';
+}
+
+// ── Helpers ──
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+function formatDate(date) {
+  const now = new Date();
+  const diff = (now - date) / 1000;
+  if (diff < 60) return 'À l\'instant';
+  if (diff < 3600) return Math.floor(diff/60) + 'min';
+  if (diff < 86400) return date.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  if (diff < 604800) return date.toLocaleDateString('fr-FR',{weekday:'short'});
+  return date.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});
+}
+
+let toastTimer;
+function showToast(msg, isErr=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show'+(isErr?' error':'');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 4000);
+}
+</script>
+</body>
+</html>

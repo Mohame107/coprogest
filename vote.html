@@ -8,6 +8,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root{--navy:#0a0f1e;--card:#141d30;--card2:#1a2540;--border:rgba(99,130,255,.15);--accent:#5b7fff;--accent2:#7c5cfc;--accent3:#38d9a9;--text:#e8eaf6;--muted:#8892b0;--danger:#ff6b6b;--gold:#ffd166;--green:#38d9a9;}
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -204,18 +205,26 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text);m
         <input type="date" class="form-input" id="v-date">
       </div>
       <div class="form-group">
-        <label class="form-label">Tantièmes requis (%)</label>
-        <input type="number" class="form-input" id="v-tantieme" placeholder="Ex : 50" min="1" max="100">
+        <label class="form-label">Catégorie</label>
+        <select class="form-select" id="v-categorie">
+          <option value="travaux">🔧 Travaux</option>
+          <option value="budget">💰 Budget</option>
+          <option value="reglement">📋 Règlement</option>
+          <option value="autre">📌 Autre</option>
+        </select>
       </div>
     </div>
     <div class="form-group">
-      <label class="form-label">Catégorie</label>
-      <select class="form-select" id="v-categorie">
-        <option value="travaux">🔧 Travaux</option>
-        <option value="budget">💰 Budget</option>
-        <option value="reglement">📋 Règlement</option>
-        <option value="autre">📌 Autre</option>
+      <label class="form-label">Type de majorité requise *</label>
+      <select class="form-select" id="v-quorum" onchange="updateQuorumInfo()">
+        <option value="simple">Majorité simple — plus de 50% des voix</option>
+        <option value="double">Double majorité — plus de 2/3 des voix (66.7%)</option>
+        <option value="absolue">Majorité absolue — plus de 50% de TOUS les résidents</option>
+        <option value="unanimite">Unanimité — 100% des voix</option>
       </select>
+      <div id="quorumInfoBox" style="margin-top:.5rem;padding:.6rem .9rem;background:rgba(91,127,255,.08);border:1px solid rgba(91,127,255,.2);border-radius:8px;font-size:.82rem;color:var(--muted);line-height:1.5">
+        ℹ️ La résolution sera adoptée si plus de 50% des votants sont Pour.
+      </div>
     </div>
     <button class="btn-submit" id="btnSubmit" onclick="createVote()">✅ Publier le vote</button>
   </div>
@@ -318,6 +327,38 @@ function renderVotes() {
     const isSyndic  = currentProfile === 'syndic';
     const catIcons  = {travaux:'🔧',budget:'💰',reglement:'📋',autre:'📌'};
 
+    // ── Calcul quorum ──
+    const quorumLabels = {
+      simple:    'Majorité simple (>50%)',
+      double:    'Double majorité (>66.7%)',
+      absolue:   'Majorité absolue (>50% de tous)',
+      unanimite: 'Unanimité (100%)'
+    };
+    const quorum = v.quorum || 'simple';
+    let quorumOk = false;
+    let seuilLabel = '';
+    if (quorum === 'simple') {
+      quorumOk = pPour > 50;
+      seuilLabel = '>50% des voix';
+    } else if (quorum === 'double') {
+      quorumOk = pPour >= 66.7;
+      seuilLabel = '>66.7% des voix';
+    } else if (quorum === 'absolue') {
+      // Majorité absolue : Pour > 50% de TOUS les résidents inscrits
+      // On approche avec totalVotes participants
+      quorumOk = pPour > 50 && totalVotes > 0;
+      seuilLabel = '>50% de tous les résidents';
+    } else if (quorum === 'unanimite') {
+      quorumOk = pPour === 100 && totalVotes > 0;
+      seuilLabel = '100% des voix';
+    }
+
+    const decisionBadge = !isOpen
+      ? (quorumOk
+          ? `<div style="display:inline-flex;align-items:center;gap:.4rem;padding:.3rem .8rem;border-radius:20px;background:rgba(56,217,169,.12);border:1px solid rgba(56,217,169,.25);font-size:.78rem;font-weight:600;color:var(--accent3)">✅ Résolution ADOPTÉE</div>`
+          : `<div style="display:inline-flex;align-items:center;gap:.4rem;padding:.3rem .8rem;border-radius:20px;background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.2);font-size:.78rem;font-weight:600;color:var(--danger)">❌ Résolution NON ADOPTÉE</div>`)
+      : `<div style="display:inline-flex;align-items:center;gap:.4rem;padding:.3rem .8rem;border-radius:20px;background:rgba(255,209,102,.08);border:1px solid rgba(255,209,102,.2);font-size:.78rem;color:var(--gold)">⏳ En cours</div>`;
+
     const dateStr = new Date(v.dateCloture).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
     const statusBadge = isOpen
       ? `<span class="status-badge badge-open">● En cours</span>`
@@ -337,6 +378,13 @@ function renderVotes() {
       ? `<button class="btn-delete visible" onclick="deleteVote('${v.id}')">🗑️</button>`
       : '';
 
+    const pdfBtn = isSyndic
+      ? `<button onclick="exportPV('${v.id}')" title="Exporter le PV en PDF"
+           style="padding:.45rem .8rem;border-radius:8px;border:1px solid rgba(56,217,169,.3);background:rgba(56,217,169,.08);color:var(--accent3);font-size:.8rem;font-weight:600;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif"
+           onmouseover="this.style.background='rgba(56,217,169,.18)'"
+           onmouseout="this.style.background='rgba(56,217,169,.08)'">📄 Exporter PV</button>`
+      : '';
+
     return `<div class="vote-card" style="animation-delay:${i*0.07}s">
       <div class="vote-header">
         <div>
@@ -346,7 +394,12 @@ function renderVotes() {
         ${statusBadge}
       </div>
       <div class="vote-desc">${v.description}</div>
-      ${v.tantieme ? `<div class="tantieme-badge">⚖️ Majorité requise : ${v.tantieme}% des tantièmes</div>` : ''}
+      <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:.8rem">
+        <div style="display:inline-flex;align-items:center;gap:.4rem;padding:.25rem .7rem;border-radius:20px;background:rgba(91,127,255,.1);border:1px solid rgba(91,127,255,.2);font-size:.76rem;color:var(--muted)">
+          ⚖️ ${quorumLabels[quorum]} — Seuil : ${seuilLabel}
+        </div>
+        ${decisionBadge}
+      </div>
       <div class="results">
         <div class="result-row">
           <div class="result-top"><span class="result-label">👍 Pour</span><span class="result-pct">${pour} vote${pour>1?'s':''} · ${pPour}%</span></div>
@@ -368,11 +421,24 @@ function renderVotes() {
         </div>
         <div style="display:flex;align-items:center;gap:.5rem">
           ${voteButtons}
+          ${pdfBtn}
           ${deleteBtn}
         </div>
       </div>
     </div>`;
   }).join('');
+}
+
+// ── Info quorum dans le modal ──
+function updateQuorumInfo() {
+  const val = document.getElementById('v-quorum').value;
+  const msgs = {
+    simple:    'ℹ️ La résolution sera adoptée si plus de 50% des votants sont Pour.',
+    double:    'ℹ️ La résolution sera adoptée si plus de 66.7% des votants sont Pour. Utilisé pour les travaux importants.',
+    absolue:   'ℹ️ La résolution sera adoptée si plus de 50% de TOUS les résidents (présents ou non) sont Pour.',
+    unanimite: 'ℹ️ La résolution sera adoptée uniquement si 100% des votants sont Pour. Utilisé pour les décisions exceptionnelles.',
+  };
+  document.getElementById('quorumInfoBox').textContent = msgs[val] || '';
 }
 
 // ── Voter ──
@@ -389,11 +455,11 @@ async function castVote(voteId, choix) {
 
 // ── Créer un vote (Syndic) ──
 async function createVote() {
-  const titre    = document.getElementById('v-titre').value.trim();
-  const desc     = document.getElementById('v-desc').value.trim();
-  const date     = document.getElementById('v-date').value;
-  const tantieme = document.getElementById('v-tantieme').value;
-  const cat      = document.getElementById('v-categorie').value;
+  const titre  = document.getElementById('v-titre').value.trim();
+  const desc   = document.getElementById('v-desc').value.trim();
+  const date   = document.getElementById('v-date').value;
+  const quorum = document.getElementById('v-quorum').value;
+  const cat    = document.getElementById('v-categorie').value;
 
   if (!titre || !desc || !date) {
     showToast('⚠️ Remplissez tous les champs obligatoires (*)', true);
@@ -407,7 +473,7 @@ async function createVote() {
     await db.collection('votes').add({
       titre, description: desc,
       dateCloture: date,
-      tantieme: tantieme || null,
+      quorum: quorum,
       categorie: cat,
       createdBy: currentUser.uid,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -415,8 +481,9 @@ async function createVote() {
     });
     closeModal();
     showToast('✅ Vote publié avec succès !');
-    // Reset form
-    ['v-titre','v-desc','v-date','v-tantieme'].forEach(id => document.getElementById(id).value = '');
+    ['v-titre','v-desc','v-date'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('v-quorum').value = 'simple';
+    updateQuorumInfo();
   } catch(e) {
     showToast('❌ Erreur lors de la création', true);
   } finally {
@@ -433,6 +500,224 @@ async function deleteVote(voteId) {
     showToast('🗑️ Vote supprimé.');
   } catch(e) {
     showToast('❌ Erreur lors de la suppression', true);
+  }
+}
+
+// ── Export PV en PDF ──
+async function exportPV(voteId) {
+  const vote = allVotes.find(v => v.id === voteId);
+  if (!vote) { showToast('❌ Vote introuvable', true); return; }
+
+  showToast('📄 Génération du PV en cours...');
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+
+    const pageW  = 210;
+    const margin = 20;
+    const cw     = pageW - 2 * margin;
+    let y = 20;
+
+    // ── Couleurs ──
+    const BLUE    = [37, 99, 235];
+    const DARK    = [30, 58, 95];
+    const GRAY    = [104, 117, 141];
+    const LIGHT   = [239, 246, 255];
+    const GREEN   = [22, 163, 74];
+    const RED     = [220, 38, 38];
+    const GOLD    = [217, 119, 6];
+    const WHITE   = [255, 255, 255];
+    const BORDER  = [203, 213, 225];
+
+    // ── En-tête ──
+    doc.setFillColor(...DARK);
+    doc.rect(0, 0, pageW, 42, 'F');
+    doc.setTextColor(...WHITE);
+    doc.setFontSize(22); doc.setFont('helvetica','bold');
+    doc.text('CoproGest', margin, 18);
+    doc.setFontSize(11); doc.setFont('helvetica','normal');
+    doc.text('Procès-Verbal d\'Assemblée Générale', margin, 27);
+    doc.setFontSize(9); doc.setTextColor(180, 196, 230);
+    doc.text(`Document généré le ${new Date().toLocaleDateString('fr-FR', {day:'2-digit',month:'long',year:'numeric'})} à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`, margin, 36);
+    y = 54;
+
+    // ── Infos vote ──
+    doc.setFillColor(...LIGHT);
+    doc.roundedRect(margin, y, cw, 38, 3, 3, 'F');
+    doc.setDrawColor(...BLUE);
+    doc.setLineWidth(0.6);
+    doc.roundedRect(margin, y, cw, 38, 3, 3, 'S');
+
+    doc.setFontSize(14); doc.setFont('helvetica','bold');
+    doc.setTextColor(...DARK);
+    doc.text(vote.titre, margin + 6, y + 10);
+
+    doc.setFontSize(9); doc.setFont('helvetica','normal');
+    doc.setTextColor(...GRAY);
+    const catLabels = { travaux:'Travaux', budget:'Budget', reglement:'Règlement', autre:'Autre' };
+    doc.text(`Catégorie : ${catLabels[vote.categorie] || 'Autre'}`, margin + 6, y + 20);
+    doc.text(`Date de clôture : ${new Date(vote.dateCloture).toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'})}`, margin + 6, y + 27);
+    const isOpen = new Date(vote.dateCloture) >= new Date();
+    doc.setTextColor(...( isOpen ? [22,163,74] : [220,38,38]));
+    doc.text(`Statut : ${isOpen ? 'En cours' : 'Clôturé'}`, margin + 6, y + 34);
+    y += 46;
+
+    // ── Description ──
+    doc.setFontSize(10); doc.setFont('helvetica','bold');
+    doc.setTextColor(...DARK);
+    doc.text('Description de la résolution :', margin, y);
+    y += 6;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    doc.setTextColor(...GRAY);
+    const descLines = doc.splitTextToSize(vote.description || '—', cw);
+    doc.text(descLines, margin, y);
+    y += descLines.length * 5 + 8;
+
+    // ── Majorité requise ──
+    const quorumLabels = {
+      simple:    'Majorite simple (>50% des voix)',
+      double:    'Double majorite (>66.7% des voix)',
+      absolue:   'Majorite absolue (>50% de tous les residents)',
+      unanimite: 'Unanimite (100% des voix)'
+    };
+    const quorumLabel = vote.quorum
+      ? quorumLabels[vote.quorum] || vote.quorum
+      : (vote.tantieme ? `${vote.tantieme}% des tantiemes` : null);
+
+    if (quorumLabel) {
+      doc.setFillColor(254, 243, 199);
+      doc.roundedRect(margin, y, cw, 10, 2, 2, 'F');
+      doc.setTextColor(...GOLD);
+      doc.setFontSize(9); doc.setFont('helvetica','bold');
+      doc.text(`Majorite requise : ${quorumLabel}`, margin + 4, y + 7);
+      y += 16;
+    }
+
+    // ── Résultats ──
+    const votes       = vote.votes || {};
+    const totalVotes  = Object.keys(votes).length;
+    const pour        = Object.values(votes).filter(x=>x==='pour').length;
+    const contre      = Object.values(votes).filter(x=>x==='contre').length;
+    const abst        = Object.values(votes).filter(x=>x==='abstention').length;
+    const pPour       = totalVotes ? Math.round(pour/totalVotes*100) : 0;
+    const pContre     = totalVotes ? Math.round(contre/totalVotes*100) : 0;
+    const pAbst       = totalVotes ? Math.round(abst/totalVotes*100) : 0;
+
+    doc.setFontSize(11); doc.setFont('helvetica','bold');
+    doc.setTextColor(...DARK);
+    doc.text('Résultats du vote', margin, y);
+    doc.setDrawColor(...BORDER); doc.setLineWidth(0.4);
+    doc.line(margin, y+2, margin+cw, y+2);
+    y += 10;
+
+    // Tableau résultats
+    const rows = [
+      { label:'Pour', count:pour, pct:pPour, color:GREEN },
+      { label:'Contre', count:contre, pct:pContre, color:RED },
+      { label:'Abstention', count:abst, pct:pAbst, color:GOLD },
+    ];
+
+    rows.forEach((row, i) => {
+      if (i % 2 === 0) {
+        doc.setFillColor(248, 250, 252);
+        doc.rect(margin, y-4, cw, 14, 'F');
+      }
+      doc.setFontSize(10); doc.setFont('helvetica','bold');
+      doc.setTextColor(...row.color);
+      doc.text(row.label, margin + 4, y + 4);
+
+      // Barre de progression
+      const barX = margin + 40;
+      const barW = cw - 70;
+      const barH = 5;
+      const barY = y;
+      doc.setFillColor(226, 232, 240);
+      doc.roundedRect(barX, barY, barW, barH, 1, 1, 'F');
+      if (row.pct > 0) {
+        doc.setFillColor(...row.color);
+        doc.roundedRect(barX, barY, barW * row.pct / 100, barH, 1, 1, 'F');
+      }
+
+      doc.setFont('helvetica','normal'); doc.setFontSize(9);
+      doc.setTextColor(...GRAY);
+      doc.text(`${row.count} vote${row.count>1?'s':''}`, barX + barW + 4, y + 4);
+      doc.setFont('helvetica','bold');
+      doc.setTextColor(...DARK);
+      doc.text(`${row.pct}%`, barX + barW + 24, y + 4);
+      y += 14;
+    });
+
+    y += 4;
+
+    // Total participants
+    doc.setFillColor(...LIGHT);
+    doc.roundedRect(margin, y, cw, 12, 2, 2, 'F');
+    doc.setFontSize(10); doc.setFont('helvetica','bold');
+    doc.setTextColor(...DARK);
+    doc.text(`Total participants : ${totalVotes} votant${totalVotes>1?'s':''}`, margin + 4, y + 8);
+    y += 20;
+
+    // ── Décision ──
+    const quorumPdf = vote.quorum || 'simple';
+    let decisionOk = false;
+    if (quorumPdf === 'simple')    decisionOk = pPour > 50;
+    else if (quorumPdf === 'double')    decisionOk = pPour >= 66.7;
+    else if (quorumPdf === 'absolue')   decisionOk = pPour > 50 && totalVotes > 0;
+    else if (quorumPdf === 'unanimite') decisionOk = pPour === 100 && totalVotes > 0;
+    else decisionOk = !isOpen && pPour > 50;
+
+    const decision = !isOpen && decisionOk;
+    doc.setFillColor(...(isOpen ? [255,251,235] : decision ? [240,253,244] : [254,242,242]));
+    doc.setDrawColor(...(isOpen ? GOLD : decision ? GREEN : RED));
+    doc.setLineWidth(0.8);
+    doc.roundedRect(margin, y, cw, 16, 3, 3, 'FD');
+    doc.setFontSize(11); doc.setFont('helvetica','bold');
+    doc.setTextColor(...(isOpen ? GOLD : decision ? GREEN : RED));
+    const decisionText = isOpen
+      ? '[En cours]  Vote en cours - resultat provisoire'
+      : (decision
+          ? '[ADOPTE]  Resolution ADOPTEE - quorum atteint'
+          : '[REJETE]  Resolution NON ADOPTEE - quorum non atteint');
+    doc.text(decisionText, margin + 4, y + 10);
+    y += 26;
+
+    // ── Signatures ──
+    doc.setFontSize(10); doc.setFont('helvetica','bold');
+    doc.setTextColor(...DARK);
+    doc.text('Signatures', margin, y);
+    doc.setDrawColor(...BORDER); doc.setLineWidth(0.3);
+    doc.line(margin, y+2, margin+cw, y+2);
+    y += 12;
+
+    const colW = cw / 2 - 5;
+    doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(...GRAY);
+    doc.text('Le Syndic :', margin, y);
+    doc.text('Le Président de séance :', margin + colW + 10, y);
+    y += 20;
+    doc.setDrawColor(...BORDER);
+    doc.line(margin, y, margin + colW, y);
+    doc.line(margin + colW + 10, y, margin + cw, y);
+    y += 6;
+    doc.setFontSize(8);
+    doc.text('Nom et signature', margin, y);
+    doc.text('Nom et signature', margin + colW + 10, y);
+
+    // ── Pied de page ──
+    doc.setFillColor(...DARK);
+    doc.rect(0, 285, pageW, 12, 'F');
+    doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.setTextColor(180, 196, 230);
+    doc.text('CoproGest — Système de gestion de copropriété  |  Document officiel généré automatiquement', margin, 293);
+    doc.text(`Page 1/1`, pageW - margin, 293, { align:'right' });
+
+    // ── Téléchargement ──
+    const fileName = `PV_${vote.titre.replace(/[^a-zA-Z0-9]/g,'_')}_${new Date().toISOString().slice(0,10)}.pdf`;
+    doc.save(fileName);
+    showToast('✅ PV exporté avec succès !');
+
+  } catch(e) {
+    showToast('❌ Erreur export PDF : ' + e.message, true);
   }
 }
 

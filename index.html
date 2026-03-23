@@ -267,6 +267,7 @@
   <a class="nav-logo" href="index.html"><span>🏢</span> CoproGest</a>
   <ul class="nav-links">
     <li><a href="#features">Services</a></li>
+    <li><a href="#adhesion">Rejoindre</a></li>
     <li><a href="#faq">FAQ</a></li>
     <li><a href="#contact">Contact</a></li>
   </ul>
@@ -363,6 +364,55 @@
   </div>
 </section>
 
+<!-- DEMANDE D'ADHÉSION -->
+<div class="divider"></div>
+<section class="section" id="adhesion">
+  <div class="section-tag">🏠 Rejoindre la copropriété</div>
+  <h2>Vous êtes copropriétaire ?</h2>
+  <p class="section-sub">Vous possédez un bien dans cette résidence ? Soumettez une demande d'adhésion. Le Syndic examinera votre dossier et créera votre compte.</p>
+  <div class="contact-grid">
+    <div class="contact-info">
+      <h3>Comment ça marche ?</h3>
+      <p style="color:var(--muted);font-size:.9rem;line-height:1.7;margin-bottom:1.2rem">Remplissez le formulaire avec vos informations. Votre demande sera transmise directement au Syndic.</p>
+      <div class="contact-item">
+        <div class="contact-item-icon">1️⃣</div>
+        <div class="contact-item-text"><span>Étape 1</span><strong>Remplissez le formulaire</strong></div>
+      </div>
+      <div class="contact-item">
+        <div class="contact-item-icon">2️⃣</div>
+        <div class="contact-item-text"><span>Étape 2</span><strong>Le Syndic examine votre demande</strong></div>
+      </div>
+      <div class="contact-item">
+        <div class="contact-item-icon">3️⃣</div>
+        <div class="contact-item-text"><span>Étape 3</span><strong>Votre compte est créé et activé</strong></div>
+      </div>
+    </div>
+    <div class="contact-form">
+      <div class="form-group">
+        <label>Prénom et Nom *</label>
+        <input type="text" class="form-input" id="adh-nom" placeholder="Jean Dupont">
+      </div>
+      <div class="form-group">
+        <label>Adresse email *</label>
+        <input type="email" class="form-input" id="adh-email" placeholder="jean@exemple.fr">
+      </div>
+      <div class="form-group">
+        <label>Téléphone</label>
+        <input type="tel" class="form-input" id="adh-tel" placeholder="+253 77 XX XX XX">
+      </div>
+      <div class="form-group">
+        <label>Numéro de lot / Appartement *</label>
+        <input type="text" class="form-input" id="adh-lot" placeholder="Ex: Appartement A12, Lot 5...">
+      </div>
+      <div class="form-group">
+        <label>Message (optionnel)</label>
+        <textarea class="form-input" id="adh-message" placeholder="Informations complémentaires..." style="min-height:80px;resize:vertical"></textarea>
+      </div>
+      <button class="btn-send" onclick="envoyerDemande()">📨 Envoyer ma demande</button>
+    </div>
+  </div>
+</section>
+
 <!-- CONTACT -->
 <div class="divider"></div>
 <section class="section" id="contact">
@@ -442,7 +492,38 @@
     window.location.href = 'register.html';
   }
 
-  function toggleFaq(btn) { btn.parentElement.classList.toggle('open'); }
+  // ── Envoyer demande d'adhésion ──
+  async function envoyerDemande() {
+    const nom     = document.getElementById('adh-nom').value.trim();
+    const email   = document.getElementById('adh-email').value.trim();
+    const tel     = document.getElementById('adh-tel').value.trim();
+    const lot     = document.getElementById('adh-lot').value.trim();
+    const message = document.getElementById('adh-message').value.trim();
+
+    if (!nom || !email || !lot) {
+      showToast('⚠️ Veuillez remplir les champs obligatoires (*)');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showToast('⚠️ Adresse email invalide');
+      return;
+    }
+
+    try {
+      await db.collection('demandes').add({
+        nom, email, tel, lot, message,
+        statut: 'en_attente',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      // Vider le formulaire
+      ['adh-nom','adh-email','adh-tel','adh-lot','adh-message'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+      showToast('✅ Demande envoyée ! Le Syndic vous contactera bientôt.');
+    } catch(e) {
+      showToast('❌ Erreur lors de l\'envoi. Réessayez.');
+    }
+  }
   let toastTimer;
   function showToast(msg) {
     const t = document.getElementById('toast');

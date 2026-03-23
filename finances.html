@@ -8,6 +8,8 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
 :root{--navy:#0a0f1e;--card:#141d30;--card2:#1a2540;--border:rgba(99,130,255,.15);--accent:#5b7fff;--accent2:#7c5cfc;--accent3:#38d9a9;--text:#e8eaf6;--muted:#8892b0;--danger:#ff6b6b;--gold:#ffd166;}
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -170,6 +172,55 @@ tbody tr:hover{background:rgba(255,255,255,.02);}
       <input type="text" class="form-input" id="c-proprio" placeholder="Nom du copropriétaire">
     </div>
     <button class="btn-submit" id="btnCharge" onclick="addCharge()">✅ Créer l'appel de charges</button>
+  </div>
+</div>
+
+<!-- MODAL CHARGE GLOBALE (répartition automatique par tantièmes) -->
+<div class="modal-overlay" id="chargeGlobalModal">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-header">
+      <h2>⚡ Appel de charges global</h2>
+      <button class="modal-close" onclick="closeModal('chargeGlobalModal')">✕</button>
+    </div>
+    <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:.9rem 1.1rem;font-size:.84rem;color:#fbbf24;margin-bottom:1.2rem;line-height:1.6">
+      ⚡ Le montant total sera réparti automatiquement entre tous les copropriétaires selon leurs tantièmes.
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description *</label>
+      <input type="text" class="form-input" id="cg-desc" placeholder="Charges communes T2 2026">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Montant total (€) *</label>
+        <input type="number" class="form-input" id="cg-montant" placeholder="50000" step="0.01" oninput="previewRepartition()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Échéance *</label>
+        <input type="date" class="form-input" id="cg-echeance">
+      </div>
+    </div>
+
+    <!-- Aperçu de la répartition -->
+    <div id="cg-preview" style="display:none">
+      <div style="font-size:.78rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:.6rem">Aperçu de la répartition</div>
+      <div style="background:var(--card2);border-radius:10px;overflow:hidden;max-height:220px;overflow-y:auto;border:1px solid var(--border)">
+        <table style="width:100%;border-collapse:collapse;font-size:.83rem">
+          <thead>
+            <tr style="background:rgba(91,127,255,.1)">
+              <th style="padding:.5rem .8rem;text-align:left;color:var(--muted);font-weight:600">Copropriétaire</th>
+              <th style="padding:.5rem .8rem;text-align:right;color:var(--muted);font-weight:600">Tantièmes</th>
+              <th style="padding:.5rem .8rem;text-align:right;color:var(--muted);font-weight:600">Montant dû</th>
+            </tr>
+          </thead>
+          <tbody id="cg-preview-body"></tbody>
+        </table>
+      </div>
+      <div id="cg-warning" style="display:none;margin-top:.6rem;padding:.6rem .9rem;background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.2);border-radius:8px;font-size:.82rem;color:var(--danger)"></div>
+    </div>
+
+    <button class="btn-submit" id="btnChargeGlobal" onclick="addChargeGlobale()" style="margin-top:1rem" disabled>
+      ⚡ Créer les appels de charges
+    </button>
   </div>
 </div>
 
@@ -355,17 +406,47 @@ function renderTab() {
           <div class="info-row"><span class="info-label">Impayé</span><span style="color:var(--danger)">${totalImpaye.toLocaleString('fr-FR')} €</span></div>
         </div>
       </div>
-      <div class="panel">
+
+      <!-- Graphiques Chart.js -->
+      <div class="grid2" style="margin-top:1rem">
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">🍩 Répartition encaissements</span></div>
+          <div style="position:relative;height:220px;display:flex;align-items:center;justify-content:center">
+            <canvas id="chartDonut"></canvas>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">📈 Dépenses par catégorie</span></div>
+          <div style="position:relative;height:220px">
+            <canvas id="chartBar"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="panel" style="margin-top:1rem">
+        <div class="panel-header"><span class="panel-title">📅 Évolution mensuelle des charges (${new Date().getFullYear()})</span></div>
+        <div style="position:relative;height:240px">
+          <canvas id="chartLine"></canvas>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:1rem">
         <div class="panel-header"><span class="panel-title">📋 Dernières charges</span></div>
         ${renderChargesTable(charges.slice(0,5), false)}
       </div>`;
+
+    // Rendre les graphiques après l'injection HTML
+    setTimeout(() => buildCharts(totalPaye, totalImpaye, totalDepenses), 100);
 
   } else if (currentTab === 'charges') {
     content.innerHTML = `
       <div class="panel">
         <div class="panel-header">
           <span class="panel-title">📋 Appels de charges</span>
-          ${isSyndic ? `<button class="btn-create visible" onclick="openModal('chargeModal')">+ Appel de charges</button>` : ''}
+          ${isSyndic ? `
+            <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+              <button class="btn-create visible" style="background:linear-gradient(135deg,#f59e0b,#d97706)" onclick="openModal('chargeGlobalModal')">⚡ Appel global (auto)</button>
+              <button class="btn-create visible" onclick="openModal('chargeModal')">+ Charge individuelle</button>
+            </div>` : ''}
         </div>
         ${renderChargesTable(charges, isSyndic)}
       </div>`;
@@ -406,23 +487,51 @@ function renderTab() {
 
   } else if (currentTab === 'dettes') {
     const dettes = charges.filter(c => ['impaye','partiel'].includes(c.statut));
+    // Calculer le retard en jours pour chaque dette
+    const now = new Date();
+    const dettesAvecRetard = dettes.map(c => {
+      const echeanceDate = c.echeance ? new Date(c.echeance) : null;
+      const retardJours  = echeanceDate ? Math.floor((now - echeanceDate) / 86400000) : 0;
+      const du = c.statut==='partiel' ? (c.montant-(c.montantPaye||0)) : c.montant;
+      return { ...c, retardJours, du };
+    }).sort((a,b) => b.retardJours - a.retardJours);
+
+    const totalDu = dettesAvecRetard.reduce((s,c)=>s+c.du, 0);
+
     content.innerHTML = `<div class="panel">
-      <div class="panel-header"><span class="panel-title">⚠️ Dettes en cours</span></div>
+      <div class="panel-header">
+        <span class="panel-title">⚠️ Dettes en cours</span>
+        ${isSyndic ? `<button class="btn-create visible" style="background:linear-gradient(135deg,#ef4444,#dc2626)" onclick="relancerTous()">📨 Relancer tous les impayés</button>` : ''}
+      </div>
       ${dettes.length === 0
         ? `<div class="empty-state"><div class="empty-icon">✅</div><h3>Aucune dette</h3><p>Tous les paiements sont à jour !</p></div>`
-        : `<div class="table-wrap"><table>
-            <thead><tr><th>Copropriétaire</th><th>Description</th><th>Montant dû</th><th>Échéance</th><th>Statut</th></tr></thead>
-            <tbody>${dettes.map(c => {
-              const du = c.statut==='partiel' ? (c.montant-(c.montantPaye||0)) : c.montant;
-              return `<tr>
-                <td>${c.proprio||'—'}</td>
-                <td>${c.description}</td>
-                <td style="color:var(--danger);font-weight:700">${du.toLocaleString('fr-FR')} €</td>
-                <td style="color:var(--muted)">${c.echeance||'—'}</td>
-                <td><span class="badge ${c.statut==='impaye'?'b-danger':'b-warning'}">${c.statut==='impaye'?'✗ Impayé':'⚠ Partiel'}</span></td>
-              </tr>`;
-            }).join('')}</tbody>
-          </table></div>`}
+        : `
+        <div style="background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.2);border-radius:10px;padding:.8rem 1.2rem;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem">
+          <span style="font-size:.9rem;color:var(--danger)">⚠️ <strong>${dettesAvecRetard.length}</strong> impayé(s) — Total dû : <strong>${totalDu.toLocaleString('fr-FR')} €</strong></span>
+          <span style="font-size:.8rem;color:var(--muted)">Triés par ancienneté (plus ancien en premier)</span>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Copropriétaire</th><th>Description</th><th>Montant dû</th><th>Échéance</th><th>Retard</th><th>Statut</th>${isSyndic?'<th>Relance</th>':''}</tr></thead>
+          <tbody>${dettesAvecRetard.map(c => {
+            const retardColor = c.retardJours > 60 ? 'var(--danger)' : c.retardJours > 30 ? 'var(--gold)' : 'var(--muted)';
+            const retardLabel = c.retardJours > 0 ? `${c.retardJours}j` : c.retardJours === 0 ? "Auj." : 'À venir';
+            return `<tr>
+              <td style="font-weight:600">${c.proprio||'—'}</td>
+              <td>${c.description}</td>
+              <td style="color:var(--danger);font-weight:700">${c.du.toLocaleString('fr-FR')} €</td>
+              <td style="color:var(--muted)">${c.echeance||'—'}</td>
+              <td style="color:${retardColor};font-weight:600">${retardLabel}</td>
+              <td><span class="badge ${c.statut==='impaye'?'b-danger':'b-warning'}">${c.statut==='impaye'?'✗ Impayé':'⚠ Partiel'}</span></td>
+              ${isSyndic?`<td>
+                <button class="btn-sm" onclick="genererRelance('${c.id}')"
+                  style="border-color:rgba(239,68,68,.3);color:var(--danger)"
+                  title="Générer la lettre de relance PDF">
+                  📨 Relancer
+                </button>
+              </td>`:''}
+            </tr>`;
+          }).join('')}</tbody>
+        </table></div>`}
     </div>`;
 
   } else if (currentTab === 'historique') {
@@ -509,7 +618,448 @@ async function addCharge() {
   finally { btn.disabled=false; btn.textContent='✅ Créer l\'appel de charges'; }
 }
 
-// ── Paiement charge ──
+// ── Aperçu répartition charges globales ──
+async function previewRepartition() {
+  const montant = parseFloat(document.getElementById('cg-montant').value);
+  const preview = document.getElementById('cg-preview');
+  const body    = document.getElementById('cg-preview-body');
+  const warning = document.getElementById('cg-warning');
+  const btn     = document.getElementById('btnChargeGlobal');
+
+  if (!montant || montant <= 0) {
+    preview.style.display = 'none';
+    btn.disabled = true;
+    return;
+  }
+
+  try {
+    // Récupérer tous les lots avec tantièmes et propriétaires
+    const lotsSnap = await db.collection('lots').get();
+    const lots = lotsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // Regrouper les tantièmes par propriétaire
+    const proprioMap = {};
+    let totalTantiemes = 0;
+
+    lots.forEach(lot => {
+      if (!lot.proprio || !lot.tantieme) return;
+      const t = parseFloat(lot.tantieme) || 0;
+      if (!proprioMap[lot.proprio]) proprioMap[lot.proprio] = { nom: lot.proprio, tantiemes: 0 };
+      proprioMap[lot.proprio].tantiemes += t;
+      totalTantiemes += t;
+    });
+
+    const proprietaires = Object.values(proprioMap);
+
+    if (proprietaires.length === 0) {
+      warning.style.display = 'block';
+      warning.textContent = '⚠️ Aucun lot avec tantièmes et propriétaires assignés. Renseignez d\'abord les lots dans le module Immeubles.';
+      body.innerHTML = '';
+      preview.style.display = 'block';
+      btn.disabled = true;
+      return;
+    }
+
+    warning.style.display = 'none';
+
+    // Générer le tableau d'aperçu
+    body.innerHTML = proprietaires.map((p, i) => {
+      const part = totalTantiemes > 0 ? (p.tantiemes / totalTantiemes * montant) : 0;
+      return `<tr style="border-top:1px solid var(--border);${i%2===0?'background:rgba(255,255,255,.02)':''}">
+        <td style="padding:.5rem .8rem;color:var(--text)">${p.nom}</td>
+        <td style="padding:.5rem .8rem;text-align:right;color:var(--muted)">${p.tantiemes.toLocaleString('fr-FR')}</td>
+        <td style="padding:.5rem .8rem;text-align:right;color:var(--accent3);font-weight:600">${part.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2})} €</td>
+      </tr>`;
+    }).join('');
+
+    // Ligne total
+    body.innerHTML += `<tr style="border-top:2px solid var(--border);background:rgba(91,127,255,.05)">
+      <td style="padding:.5rem .8rem;font-weight:700;color:var(--text)">TOTAL</td>
+      <td style="padding:.5rem .8rem;text-align:right;font-weight:700;color:var(--text)">${totalTantiemes.toLocaleString('fr-FR')}</td>
+      <td style="padding:.5rem .8rem;text-align:right;font-weight:700;color:var(--gold)">${montant.toLocaleString('fr-FR', {minimumFractionDigits:2})} €</td>
+    </tr>`;
+
+    preview.style.display = 'block';
+    btn.disabled = false;
+
+    // Stocker pour utilisation lors de la création
+    btn.dataset.proprietaires = JSON.stringify(proprietaires);
+    btn.dataset.totalTantiemes = totalTantiemes;
+
+  } catch(e) {
+    showToast('❌ Erreur chargement lots : ' + e.message, true);
+  }
+}
+
+// ── Créer les charges globales ──
+async function addChargeGlobale() {
+  const desc    = document.getElementById('cg-desc').value.trim();
+  const montant = parseFloat(document.getElementById('cg-montant').value);
+  const ech     = document.getElementById('cg-echeance').value;
+  const btn     = document.getElementById('btnChargeGlobal');
+
+  if (!desc) { showToast('⚠️ Description obligatoire', true); return; }
+  if (!montant || montant <= 0) { showToast('⚠️ Montant invalide', true); return; }
+  if (!ech) { showToast('⚠️ Échéance obligatoire', true); return; }
+
+  const proprietaires   = JSON.parse(btn.dataset.proprietaires || '[]');
+  const totalTantiemes  = parseFloat(btn.dataset.totalTantiemes || 0);
+
+  if (proprietaires.length === 0) { showToast('⚠️ Aucun propriétaire avec tantièmes trouvé', true); return; }
+
+  if (!confirm(`Créer ${proprietaires.length} appel(s) de charges pour un total de ${montant.toLocaleString('fr-FR')} € ?`)) return;
+
+  btn.disabled = true;
+  btn.textContent = `Création de ${proprietaires.length} charges...`;
+
+  try {
+    const batch = db.batch();
+    let created = 0;
+
+    proprietaires.forEach(p => {
+      const part = totalTantiemes > 0 ? (p.tantiemes / totalTantiemes * montant) : 0;
+      if (part <= 0) return;
+
+      const ref = db.collection('charges').doc();
+      batch.set(ref, {
+        description:  `${desc} — ${p.nom}`,
+        montant:      Math.round(part * 100) / 100,
+        echeance:     ech,
+        proprio:      p.nom,
+        statut:       'impaye',
+        montantPaye:  0,
+        datePaiement: null,
+        chargeGlobale: true,
+        descriptionGlobale: desc,
+        createdBy:    currentUser.uid,
+        createdAt:    firebase.firestore.FieldValue.serverTimestamp()
+      });
+      created++;
+    });
+
+    await batch.commit();
+
+    closeModal('chargeGlobalModal');
+    showToast(`✅ ${created} appel(s) de charges créés automatiquement !`);
+
+    // Réinitialiser le formulaire
+    document.getElementById('cg-desc').value = '';
+    document.getElementById('cg-montant').value = '';
+    document.getElementById('cg-echeance').value = '';
+    document.getElementById('cg-preview').style.display = 'none';
+
+  } catch(e) {
+    showToast('❌ Erreur : ' + e.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚡ Créer les appels de charges';
+  }
+}
+
+// ── Construire les graphiques Chart.js ──
+function buildCharts(totalPaye, totalImpaye, totalDepenses) {
+  Chart.defaults.color = '#8892b0';
+  Chart.defaults.font.family = "'DM Sans', sans-serif";
+
+  // ── 1. Donut — Répartition encaissements ──
+  const ctxDonut = document.getElementById('chartDonut');
+  if (ctxDonut) {
+    new Chart(ctxDonut, {
+      type: 'doughnut',
+      data: {
+        labels: ['Encaissé', 'Impayé', 'Budget restant'],
+        datasets: [{
+          data: [
+            totalPaye,
+            totalImpaye,
+            Math.max(0, BUDGET_TOTAL - totalDepenses)
+          ],
+          backgroundColor: ['#38d9a9', '#ff6b6b', '#1e2540'],
+          borderColor:     ['#38d9a9', '#ff6b6b', '#2a3560'],
+          borderWidth: 2,
+          hoverOffset: 8
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        cutout: '65%',
+        plugins: {
+          legend: { position:'bottom', labels:{ padding:16, font:{ size:11 } } },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed.toLocaleString('fr-FR')} €` } }
+        }
+      }
+    });
+  }
+
+  // ── 2. Bar — Dépenses par catégorie ──
+  const ctxBar = document.getElementById('chartBar');
+  if (ctxBar) {
+    const cats = {};
+    depenses.forEach(d => {
+      const cat = d.categorie || 'Autre';
+      cats[cat] = (cats[cat] || 0) + (d.montant || 0);
+    });
+    const sortedCats = Object.entries(cats).sort((a,b) => b[1]-a[1]).slice(0,6);
+    const barColors = ['#5b7fff','#38d9a9','#ffd166','#ff6b6b','#7c5cfc','#06b6d4'];
+
+    new Chart(ctxBar, {
+      type: 'bar',
+      data: {
+        labels: sortedCats.map(([k]) => k),
+        datasets: [{
+          label: 'Dépenses (€)',
+          data: sortedCats.map(([,v]) => v),
+          backgroundColor: sortedCats.map((_,i) => barColors[i % barColors.length] + '99'),
+          borderColor:     sortedCats.map((_,i) => barColors[i % barColors.length]),
+          borderWidth: 2,
+          borderRadius: 6,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: 'rgba(99,130,255,.08)' }, ticks: { font: { size:10 } } },
+          y: { grid: { color: 'rgba(99,130,255,.08)' }, ticks: { callback: v => v.toLocaleString('fr-FR')+'€', font:{ size:10 } } }
+        }
+      }
+    });
+  }
+
+  // ── 3. Line — Évolution mensuelle charges ──
+  const ctxLine = document.getElementById('chartLine');
+  if (ctxLine) {
+    const moisLabels = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+    const annee = new Date().getFullYear();
+
+    // Charges appelées par mois
+    const chargesParMois = Array(12).fill(0);
+    charges.forEach(c => {
+      if (!c.echeance) return;
+      const d = new Date(c.echeance);
+      if (d.getFullYear() === annee) chargesParMois[d.getMonth()] += c.montant || 0;
+    });
+
+    // Paiements reçus par mois
+    const paiementsParMois = Array(12).fill(0);
+    charges.forEach(c => {
+      if (!c.datePaiement) return;
+      const d = new Date(c.datePaiement);
+      if (d.getFullYear() === annee) paiementsParMois[d.getMonth()] += (c.statut==='paye'?c.montant:c.montantPaye||0);
+    });
+
+    new Chart(ctxLine, {
+      type: 'line',
+      data: {
+        labels: moisLabels,
+        datasets: [
+          {
+            label: 'Charges appelées',
+            data: chargesParMois,
+            borderColor: '#5b7fff',
+            backgroundColor: 'rgba(91,127,255,.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: '#5b7fff',
+            pointRadius: 4
+          },
+          {
+            label: 'Paiements reçus',
+            data: paiementsParMois,
+            borderColor: '#38d9a9',
+            backgroundColor: 'rgba(56,217,169,.08)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: '#38d9a9',
+            pointRadius: 4
+          }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position:'top', labels:{ padding:16, font:{ size:11 } } },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('fr-FR')} €` } }
+        },
+        scales: {
+          x: { grid: { color:'rgba(99,130,255,.08)' } },
+          y: { grid: { color:'rgba(99,130,255,.08)' }, ticks: { callback: v => v.toLocaleString('fr-FR')+'€', font:{size:10} } }
+        }
+      }
+    });
+  }
+}
+
+// ── Générer lettre de relance PDF ──
+async function genererRelance(chargeId) {
+  const charge = charges.find(c => c.id === chargeId);
+  if (!charge) return;
+
+  showToast('📨 Génération de la lettre de relance...');
+
+  // Récupérer infos copropriété et Syndic
+  let syndicNom = 'Le Syndic', coproNom = 'Résidence', syndicEmail = '';
+  try {
+    const cfgSnap = await db.collection('config').doc('copropriete').get();
+    if (cfgSnap.exists) coproNom = cfgSnap.data().nom || coproNom;
+    const syndicSnap = await db.collection('users').where('profile','==','syndic').get();
+    if (!syndicSnap.empty) {
+      const s = syndicSnap.docs[0].data();
+      syndicNom  = s.prenom ? `${s.prenom} ${s.nom||''}`.trim() : syndicNom;
+      syndicEmail = s.email || '';
+    }
+  } catch(e) {}
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  const pageW = 210, margin = 25, cw = pageW - 2*margin;
+
+  const DARK  = [30, 58, 95];
+  const BLUE  = [37, 99, 235];
+  const RED   = [220, 38, 38];
+  const GRAY  = [104, 117, 141];
+  const LIGHT = [239, 246, 255];
+  const WHITE = [255, 255, 255];
+
+  const now     = new Date();
+  const du      = charge.statut==='partiel' ? (charge.montant-(charge.montantPaye||0)) : charge.montant;
+  const echeance = charge.echeance ? new Date(charge.echeance) : null;
+  const retardJ  = echeance ? Math.floor((now - echeance) / 86400000) : 0;
+  const numRelance = retardJ > 60 ? '2ème' : '1ère';
+
+  // ── En-tête ──
+  doc.setFillColor(...DARK);
+  doc.rect(0, 0, pageW, 35, 'F');
+  doc.setTextColor(...WHITE);
+  doc.setFontSize(16); doc.setFont('helvetica','bold');
+  doc.text('CoproGest', margin, 15);
+  doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.setTextColor(180, 196, 230);
+  doc.text(coproNom, margin, 23);
+  doc.text(`Lettre de relance - ${numRelance} relance`, pageW-margin, 20, {align:'right'});
+  doc.setFontSize(8);
+  doc.text(`Ref : RELANCE-${now.getFullYear()}-${String(charges.indexOf(charge)+1).padStart(3,'0')}`, pageW-margin, 28, {align:'right'});
+
+  let y = 48;
+
+  // ── Expéditeur ──
+  doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(...GRAY);
+  doc.text('Expéditeur :', margin, y);
+  doc.setTextColor(...DARK); doc.setFont('helvetica','bold');
+  doc.text(syndicNom, margin, y+6);
+  doc.setFont('helvetica','normal'); doc.setTextColor(...GRAY);
+  doc.text('Syndic de copropriété', margin, y+12);
+  if (syndicEmail) doc.text(syndicEmail, margin, y+18);
+
+  // ── Destinataire ──
+  doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(...GRAY);
+  doc.text('Destinataire :', pageW/2, y);
+  doc.setTextColor(...DARK); doc.setFont('helvetica','bold');
+  doc.text(charge.proprio || '—', pageW/2, y+6);
+  doc.setFont('helvetica','normal'); doc.setTextColor(...GRAY);
+  doc.text('Copropriétaire', pageW/2, y+12);
+  y += 30;
+
+  // ── Date ──
+  doc.setTextColor(...GRAY); doc.setFontSize(9);
+  doc.text(`Le ${now.toLocaleDateString('fr-FR', {day:'2-digit', month:'long', year:'numeric'})}`, pageW-margin, y, {align:'right'});
+  y += 12;
+
+  // ── Objet ──
+  doc.setFillColor(...LIGHT);
+  doc.roundedRect(margin, y, cw, 10, 2, 2, 'F');
+  doc.setTextColor(...BLUE); doc.setFontSize(10); doc.setFont('helvetica','bold');
+  doc.text(`Objet : ${numRelance} relance - Charges de copropriete impayees`, margin+4, y+7);
+  y += 18;
+
+  // ── Corps ──
+  doc.setTextColor(...DARK); doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  doc.text(`Madame, Monsieur ${charge.proprio||''},`, margin, y); y+=8;
+
+  const intro = retardJ > 0
+    ? `Sauf erreur de notre part, nous constatons que la somme de ${du.toLocaleString('fr-FR')} EUR au titre de "${charge.description}" demeure impayee a ce jour, soit ${retardJ} jour(s) apres l'echeance du ${echeance?.toLocaleDateString('fr-FR')||'—'}.`
+    : `Nous nous permettons de vous rappeler que la somme de ${du.toLocaleString('fr-FR')} EUR au titre de "${charge.description}" arrive a echeance.`;
+
+  const introLines = doc.splitTextToSize(intro, cw);
+  doc.text(introLines, margin, y); y += introLines.length*6+6;
+
+  doc.text('Nous vous prions de bien vouloir regulariser cette situation dans les plus brefs delais.', margin, y); y+=12;
+
+  // ── Tableau récapitulatif ──
+  doc.setFillColor(...DARK);
+  doc.roundedRect(margin, y, cw, 8, 2, 2, 'F');
+  doc.setTextColor(...WHITE); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+  doc.text('Recapitulatif', margin+4, y+5.5);
+  y += 10;
+
+  const rows = [
+    ['Designation', charge.description || '—'],
+    ['Montant total', `${(charge.montant||0).toLocaleString('fr-FR')} EUR`],
+    ['Deja regle', `${(charge.montantPaye||0).toLocaleString('fr-FR')} EUR`],
+    ['Reste a payer', `${du.toLocaleString('fr-FR')} EUR`],
+    ['Echeance', charge.echeance || '—'],
+    ['Retard', retardJ > 0 ? `${retardJ} jour(s)` : 'Non echu'],
+  ];
+
+  rows.forEach((row, i) => {
+    if (i%2===0) { doc.setFillColor(247,249,252); doc.rect(margin, y, cw, 8, 'F'); }
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...GRAY);
+    doc.text(row[0], margin+3, y+5.5);
+    const isTotal = row[0] === 'Reste a payer';
+    doc.setTextColor(...(isTotal ? RED : DARK));
+    doc.setFont('helvetica', isTotal ? 'bold' : 'normal');
+    doc.text(row[1], pageW-margin-3, y+5.5, {align:'right'});
+    y += 8;
+  });
+  y += 8;
+
+  // ── Coordonnées paiement ──
+  doc.setFillColor(254, 242, 242);
+  doc.roundedRect(margin, y, cw, 14, 2, 2, 'F');
+  doc.setDrawColor(...RED); doc.setLineWidth(0.5);
+  doc.roundedRect(margin, y, cw, 14, 2, 2, 'S');
+  doc.setTextColor(...RED); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+  doc.text('A defaut de reglement sous 8 jours, nous serons contraints d\'engager les procedures de recouvrement prevues par la loi.', margin+4, y+5, {maxWidth:cw-8});
+  doc.text('Veuillez contacter le Syndic pour tout arrangement.', margin+4, y+11);
+  y += 22;
+
+  // ── Formule de politesse ──
+  doc.setTextColor(...GRAY); doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  doc.text('Dans l\'attente de votre reglement, nous vous adressons nos salutations distinguees.', margin, y); y+=12;
+  doc.setTextColor(...DARK); doc.setFont('helvetica','bold');
+  doc.text(syndicNom, margin, y); y+=6;
+  doc.setFont('helvetica','normal'); doc.setTextColor(...GRAY);
+  doc.text('Syndic de copropriete', margin, y);
+
+  // ── Pied de page ──
+  doc.setFillColor(...DARK);
+  doc.rect(0, 285, pageW, 12, 'F');
+  doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(180,196,230);
+  doc.text(`CoproGest - ${coproNom}  |  Document officiel`, margin, 293);
+  doc.text(`Ref: RELANCE-${now.getFullYear()}-${chargeId.slice(-4).toUpperCase()}  |  Page 1/1`, pageW-margin, 293, {align:'right'});
+
+  // Enregistrement + historique Firestore
+  doc.save(`Relance_${charge.proprio||'resident'}_${now.toISOString().slice(0,10)}.pdf`);
+
+  // Enregistrer la relance dans Firestore
+  await db.collection('charges').doc(chargeId).update({
+    derniereRelance: firebase.firestore.FieldValue.serverTimestamp(),
+    nbRelances: firebase.firestore.FieldValue.increment(1)
+  });
+
+  showToast(`✅ Lettre de relance générée pour ${charge.proprio} !`);
+}
+
+// ── Relancer tous les impayés ──
+async function relancerTous() {
+  const dettes = charges.filter(c => ['impaye','partiel'].includes(c.statut));
+  if (!dettes.length) { showToast('⚠️ Aucun impayé', true); return; }
+  if (!confirm(`Générer ${dettes.length} lettre(s) de relance ?`)) return;
+  for (const c of dettes) await genererRelance(c.id);
+  showToast(`✅ ${dettes.length} lettre(s) générée(s) !`);
+}
 function openPaiement(id, desc, montant, montantPaye) {
   document.getElementById('p-chargeId').value = id;
   const reste = montant - montantPaye;

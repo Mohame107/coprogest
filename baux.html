@@ -211,7 +211,7 @@ auth.onAuthStateChanged(async user => {
       buildSidebar(currentProfile||d.profile||'locataire', name, user.email, 'baux.html');
     }
   } catch(e) {}
-  if (['syndic','conseil'].includes(currentProfile)) document.getElementById('btnCreate').classList.add('visible');
+  if (currentProfile === 'syndic') document.getElementById('btnCreate').classList.add('visible');
   document.getElementById('ls').style.display='none';
   document.getElementById('sidebar').style.display='flex';
   document.getElementById('mainContent').style.display='block';
@@ -266,7 +266,7 @@ function renderBaux() {
   if (q) list=list.filter(b=>(b.lot||'').toLowerCase().includes(q)||(b.locataire||'').toLowerCase().includes(q));
 
   const grid=document.getElementById('bauxGrid');
-  const isSyndic=['syndic','conseil'].includes(currentProfile);
+  const isSyndic = currentProfile === 'syndic';
 
   if (!list.length) { grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">📋</div><h3>Aucun bail trouvé</h3></div>`; return; }
 

@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoproGest — Mon profil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+:root{--navy:#0a0f1e;--card:#141d30;--card2:#1a2540;--border:rgba(99,130,255,.15);--accent:#5b7fff;--accent2:#7c5cfc;--accent3:#38d9a9;--text:#e8eaf6;--muted:#8892b0;--danger:#ff6b6b;--gold:#ffd166;--green:#38d9a9;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text);min-height:100vh;}
+
+/* ── Sidebar styles ── */
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:240px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:50;overflow-y:auto;}
+.nav-section-label{padding:.5rem 1.5rem .25rem;font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:.5rem;}
+.nav-item{display:flex;align-items:center;gap:.75rem;padding:.65rem 1.5rem;color:var(--muted);font-size:.88rem;transition:all .2s;border-left:2px solid transparent;text-decoration:none;cursor:pointer;}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.03);}
+.nav-item.active{color:var(--text);background:rgba(91,127,255,.1);border-left-color:var(--accent);}
+.nav-icon{font-size:1rem;width:20px;text-align:center;}
+
+.main{margin-left:240px;padding:2.5rem;}
+.page-header{margin-bottom:2rem;}
+.page-title{font-family:'Syne',sans-serif;font-weight:800;font-size:1.7rem;}
+.page-sub{color:var(--muted);font-size:.92rem;margin-top:.3rem;}
+
+/* Avatar */
+.avatar-section{display:flex;align-items:center;gap:1.5rem;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.8rem;margin-bottom:1.5rem;}
+.avatar-big{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;color:#fff;flex-shrink:0;}
+.avatar-info h2{font-family:'Syne',sans-serif;font-weight:800;font-size:1.3rem;}
+.avatar-info p{color:var(--muted);font-size:.88rem;margin-top:.2rem;}
+.profile-badge{display:inline-flex;align-items:center;gap:.4rem;padding:.3rem .8rem;border-radius:20px;font-size:.78rem;font-weight:600;margin-top:.5rem;}
+.badge-syndic{background:rgba(91,127,255,.15);color:var(--accent);}
+.badge-proprietaire,.badge-coproprietaire{background:rgba(255,209,102,.15);color:var(--gold);}
+.badge-conseil{background:rgba(56,217,169,.15);color:var(--accent3);}
+.badge-locataire{background:rgba(255,107,107,.15);color:var(--danger);}
+
+/* Grid */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.8rem;}
+.card-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:1.4rem;display:flex;align-items:center;gap:.6rem;}
+.card-title span{font-size:1.1rem;}
+
+/* Form */
+.form-group{margin-bottom:1.1rem;}
+.form-label{font-size:.75rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem;display:block;}
+.form-input{width:100%;padding:.8rem 1rem;background:var(--card2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.9rem;transition:border-color .2s;}
+.form-input:focus{outline:none;border-color:var(--accent);}
+.form-input:disabled{opacity:.5;cursor:not-allowed;}
+.form-input::placeholder{color:var(--muted);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.readonly-field{width:100%;padding:.8rem 1rem;background:rgba(255,255,255,.03);border:1px solid rgba(99,130,255,.08);border-radius:10px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.9rem;display:flex;align-items:center;gap:.5rem;}
+.readonly-icon{font-size:.85rem;opacity:.6;}
+.field-note{font-size:.75rem;color:var(--muted);margin-top:.3rem;}
+
+/* Buttons */
+.btn{padding:.7rem 1.4rem;border-radius:10px;border:none;font-family:'DM Sans',sans-serif;font-size:.88rem;font-weight:600;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:.5rem;}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;}
+.btn-primary:hover{opacity:.88;}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;}
+.btn-danger{background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.25);color:var(--danger);}
+.btn-danger:hover{background:rgba(255,107,107,.2);}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);}
+.btn-ghost:hover{border-color:rgba(99,130,255,.4);color:var(--text);}
+
+/* Password strength */
+.pwd-strength{height:4px;border-radius:2px;margin-top:.5rem;transition:all .3s;background:var(--border);}
+.pwd-strength.weak{background:#ff6b6b;width:30%;}
+.pwd-strength.medium{background:var(--gold);width:65%;}
+.pwd-strength.strong{background:var(--green);width:100%;}
+.pwd-label{font-size:.72rem;margin-top:.3rem;}
+.pwd-label.weak{color:var(--danger);}
+.pwd-label.medium{color:var(--gold);}
+.pwd-label.strong{color:var(--green);}
+
+/* Activity */
+.activity-item{display:flex;align-items:center;gap:.8rem;padding:.7rem 0;border-bottom:1px solid var(--border);}
+.activity-item:last-child{border-bottom:none;}
+.activity-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.activity-text{font-size:.85rem;flex:1;}
+.activity-date{font-size:.75rem;color:var(--muted);}
+
+/* Success banner */
+.success-banner{background:rgba(56,217,169,.1);border:1px solid rgba(56,217,169,.25);border-radius:10px;padding:.9rem 1.2rem;font-size:.88rem;color:var(--green);display:none;align-items:center;gap:.6rem;margin-bottom:1rem;}
+.success-banner.show{display:flex;}
+
+/* Loading */
+.loading-screen{position:fixed;inset:0;background:var(--navy);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:1rem;}
+.spinner{width:44px;height:44px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+.toast{position:fixed;bottom:2rem;right:2rem;z-index:9999;background:var(--card2);border:1px solid var(--border);border-left:4px solid var(--green);border-radius:12px;padding:1rem 1.4rem;font-size:.88rem;color:var(--text);transform:translateX(120%);transition:transform .35s cubic-bezier(.22,1,.36,1);max-width:320px;}
+.toast.show{transform:translateX(0);}
+.toast.error{border-left-color:var(--danger);}
+
+@media(max-width:900px){.sidebar{display:none;}.main{margin-left:0;padding:1.5rem;}.grid{grid-template-columns:1fr;}}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.card{animation:fadeUp .3s ease both;}
+.card:nth-child(2){animation-delay:.08s;}
+.card:nth-child(3){animation-delay:.12s;}
+</style>
+</head>
+<body>
+
+<div class="loading-screen" id="ls"><div class="spinner"></div></div>
+
+<aside class="sidebar" id="sidebar" style="display:none"></aside>
+
+<main class="main" id="mainContent" style="display:none">
+
+  <div class="page-header">
+    <div class="page-title">👤 Mon profil</div>
+    <div class="page-sub">Gérez vos informations personnelles et votre sécurité</div>
+  </div>
+
+  <!-- Success banner -->
+  <div class="success-banner" id="successBanner">✅ Modifications enregistrées avec succès !</div>
+
+  <!-- Avatar section -->
+  <div class="avatar-section">
+    <div class="avatar-big" id="avatarBig">?</div>
+    <div class="avatar-info">
+      <h2 id="avatarName">Chargement...</h2>
+      <p id="avatarEmail">—</p>
+      <div class="profile-badge" id="profileBadge">—</div>
+    </div>
+  </div>
+
+  <div class="grid">
+
+    <!-- Informations personnelles -->
+    <div class="card">
+      <div class="card-title"><span>✏️</span> Informations personnelles</div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Prénom *</label>
+          <input type="text" class="form-input" id="inputPrenom" placeholder="Jean">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nom *</label>
+          <input type="text" class="form-input" id="inputNom" placeholder="Dupont">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Téléphone</label>
+        <input type="tel" class="form-input" id="inputTel" placeholder="+253 77 XX XX XX">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Email (non modifiable)</label>
+        <div class="readonly-field"><span class="readonly-icon">✉️</span><span id="roEmail">—</span></div>
+        <div class="field-note">L'email est lié à votre compte Firebase et ne peut pas être modifié ici.</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Profil (non modifiable)</label>
+        <div class="readonly-field"><span class="readonly-icon">🔒</span><span id="roProfil">—</span></div>
+        <div class="field-note">Seul le Syndic peut modifier votre profil.</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Lot / Logement (non modifiable)</label>
+        <div class="readonly-field"><span class="readonly-icon">🏠</span><span id="roLot">Non assigné</span></div>
+      </div>
+
+      <button class="btn btn-primary" onclick="saveInfos()" id="btnSaveInfos">💾 Enregistrer les modifications</button>
+    </div>
+
+    <!-- Sécurité -->
+    <div style="display:flex;flex-direction:column;gap:1.5rem;">
+
+      <div class="card">
+        <div class="card-title"><span>🔐</span> Changer le mot de passe</div>
+
+        <div class="form-group">
+          <label class="form-label">Mot de passe actuel *</label>
+          <input type="password" class="form-input" id="inputCurrentPwd" placeholder="••••••••">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Nouveau mot de passe *</label>
+          <input type="password" class="form-input" id="inputNewPwd" placeholder="••••••••" oninput="checkStrength(this.value)">
+          <div class="pwd-strength" id="pwdStrength"></div>
+          <div class="pwd-label" id="pwdLabel"></div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Confirmer le nouveau mot de passe *</label>
+          <input type="password" class="form-input" id="inputConfirmPwd" placeholder="••••••••">
+        </div>
+
+        <button class="btn btn-primary" onclick="changePwd()" id="btnChangePwd">🔑 Changer le mot de passe</button>
+      </div>
+
+      <!-- Infos compte -->
+      <div class="card">
+        <div class="card-title"><span>📋</span> Informations du compte</div>
+
+        <div class="form-group">
+          <label class="form-label">Copropriété</label>
+          <div class="readonly-field"><span class="readonly-icon">🏢</span><span id="roCopro">—</span></div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Membre depuis</label>
+          <div class="readonly-field"><span class="readonly-icon">📅</span><span id="roDate">—</span></div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Dernière connexion</label>
+          <div class="readonly-field"><span class="readonly-icon">🕐</span><span id="roLastLogin">—</span></div>
+        </div>
+      </div>
+
+      <!-- Configuration numéro d'urgence (Syndic uniquement) -->
+      <div class="card" id="cardUrgence" style="display:none;border-color:rgba(255,107,107,.2)">
+        <div class="card-title" style="color:var(--danger)"><span>🚨</span> Numéro d'urgence</div>
+        <p style="font-size:.85rem;color:var(--muted);margin-bottom:1.2rem;line-height:1.6">
+          Ce numéro sera affiché à tous les résidents quand ils signalent un incident urgent. Il apparaît en permanence sur la page Incidents.
+        </p>
+        <div class="form-group">
+          <label class="form-label">Votre numéro d'urgence *</label>
+          <input type="tel" class="form-input" id="inputUrgenceTel" placeholder="+253 77 XX XX XX">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Votre nom affiché</label>
+          <input type="text" class="form-input" id="inputUrgenceNom" placeholder="Mohamed Abdi Ali — Syndic">
+        </div>
+        <button class="btn btn-primary" onclick="saveUrgence()" id="btnSaveUrgence">🚨 Enregistrer le numéro d'urgence</button>
+      </div>
+
+      <!-- Transfert de droits Syndic (visible uniquement pour le Syndic) -->
+      <div class="card" id="cardTransfertSyndic" style="display:none;border-color:rgba(255,107,107,.2)">
+        <div class="card-title" style="color:var(--danger)"><span>🏛️</span> Transférer les droits Syndic</div>
+
+        <div style="background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.2);border-radius:10px;padding:.9rem 1rem;font-size:.84rem;color:#ff9999;line-height:1.6;margin-bottom:1.2rem">
+          ⚠️ Cette action transfère définitivement vos droits d'administration à un autre résident. Vous deviendrez <strong>Copropriétaire</strong>. Cette action est irréversible sans intervention manuelle.
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Nouveau Syndic *</label>
+          <select class="form-select" id="selectNouveauSyndic">
+            <option value="">-- Choisir un résident --</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Votre mot de passe actuel (confirmation) *</label>
+          <input type="password" class="form-input" id="inputConfirmSyndicPwd" placeholder="••••••••">
+        </div>
+
+        <div style="background:rgba(255,107,107,.05);border:1px solid rgba(255,107,107,.15);border-radius:8px;padding:.7rem .9rem;font-size:.82rem;color:var(--muted);margin-bottom:1rem">
+          Après le transfert :<br>
+          • <strong id="nouveauSyndicNom">Le résident sélectionné</strong> → deviendra <span style="color:var(--accent)">Syndic</span><br>
+          • Vous → deviendrez <span style="color:var(--gold)">Copropriétaire</span>
+        </div>
+
+        <button class="btn btn-danger" onclick="transfererSyndic()" id="btnTransfererSyndic">
+          🏛️ Transférer les droits Syndic
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="sidebar.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+let currentUser = null;
+let currentProfile = null;
+
+const profileLabels = {
+  syndic:'🏛️ Syndic', proprietaire:'🏠 Copropriétaire', coproprietaire:'🏠 Copropriétaire',
+  conseil:'⚖️ Conseil Syndical', locataire:'🔑 Locataire'
+};
+const avatarColors = {
+  syndic:'#5b7fff', proprietaire:'#ffd166', coproprietaire:'#ffd166',
+  conseil:'#38d9a9', locataire:'#ff6b6b'
+};
+
+auth.onAuthStateChanged(async user => {
+  if (!user) { window.location.href = 'login.html'; return; }
+  currentUser = user;
+
+  try {
+    const snap = await db.collection('users').doc(user.uid).get();
+    const d = snap.exists ? snap.data() : {};
+    currentProfile = d.profile || 'locataire';
+
+    const prenom = d.prenom || '';
+    const nom    = d.nom    || '';
+    const name   = (prenom + ' ' + nom).trim() || user.displayName || 'Utilisateur';
+
+    // Sidebar
+    buildSidebar(currentProfile, name, user.email, 'profil.html');
+
+    // Avatar
+    const initials = ((prenom[0]||'') + (nom[0]||'')).toUpperCase() || '?';
+    const av = document.getElementById('avatarBig');
+    av.textContent = initials;
+    av.style.background = `linear-gradient(135deg, ${avatarColors[currentProfile]||'#5b7fff'}, #7c5cfc)`;
+
+    // Infos
+    document.getElementById('avatarName').textContent   = name;
+    document.getElementById('avatarEmail').textContent  = user.email;
+    document.getElementById('profileBadge').textContent = profileLabels[currentProfile] || currentProfile;
+    document.getElementById('profileBadge').className   = `profile-badge badge-${currentProfile}`;
+
+    // Champs modifiables
+    document.getElementById('inputPrenom').value = prenom;
+    document.getElementById('inputNom').value    = nom;
+    document.getElementById('inputTel').value    = d.tel || '';
+
+    // Champs lecture seule
+    document.getElementById('roEmail').textContent  = user.email;
+    document.getElementById('roProfil').textContent = profileLabels[currentProfile] || currentProfile;
+    document.getElementById('roLot').textContent    = d.lot || 'Non assigné';
+    document.getElementById('roCopro').textContent  = d.copro || '—';
+
+    // Dates
+    const dateOpts = { day:'2-digit', month:'long', year:'numeric' };
+    if (d.createdAt?.toDate) {
+      document.getElementById('roDate').textContent = d.createdAt.toDate().toLocaleDateString('fr-FR', dateOpts);
+    }
+    if (d.lastLogin?.toDate) {
+      document.getElementById('roLastLogin').textContent = d.lastLogin.toDate().toLocaleDateString('fr-FR', { ...dateOpts, hour:'2-digit', minute:'2-digit' });
+    } else if (user.metadata?.lastSignInTime) {
+      document.getElementById('roLastLogin').textContent = new Date(user.metadata.lastSignInTime).toLocaleDateString('fr-FR', { ...dateOpts, hour:'2-digit', minute:'2-digit' });
+    }
+
+  } catch(e) { showToast('Erreur de chargement : ' + e.message, true); }
+
+  document.getElementById('ls').style.display = 'none';
+  document.getElementById('sidebar').style.display = 'flex';
+  document.getElementById('mainContent').style.display = 'block';
+
+  // Charger la section transfert Syndic si applicable
+  chargerResidentsPourTransfert();
+  chargerConfigUrgence();
+});
+
+// ── Enregistrer les informations personnelles ──
+async function saveInfos() {
+  const prenom = document.getElementById('inputPrenom').value.trim();
+  const nom    = document.getElementById('inputNom').value.trim();
+  const tel    = document.getElementById('inputTel').value.trim();
+
+  if (!prenom || !nom) { showToast('⚠️ Prénom et nom obligatoires', true); return; }
+
+  const btn = document.getElementById('btnSaveInfos');
+  btn.disabled = true; btn.textContent = 'Enregistrement...';
+
+  try {
+    // Mettre à jour Firestore
+    await db.collection('users').doc(currentUser.uid).update({
+      prenom, nom, tel,
+      lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // Mettre à jour Firebase Auth displayName
+    await currentUser.updateProfile({ displayName: `${prenom} ${nom}` });
+
+    // Mettre à jour l'affichage
+    const name = `${prenom} ${nom}`;
+    document.getElementById('avatarName').textContent = name;
+    const initials = ((prenom[0]||'')+(nom[0]||'')).toUpperCase();
+    document.getElementById('avatarBig').textContent = initials;
+
+    document.getElementById('successBanner').classList.add('show');
+    setTimeout(() => document.getElementById('successBanner').classList.remove('show'), 4000);
+    showToast('✅ Informations mises à jour !');
+  } catch(e) {
+    showToast('❌ Erreur : ' + e.message, true);
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 Enregistrer les modifications';
+  }
+}
+
+// ── Changer le mot de passe ──
+async function changePwd() {
+  const current = document.getElementById('inputCurrentPwd').value;
+  const newPwd  = document.getElementById('inputNewPwd').value;
+  const confirm = document.getElementById('inputConfirmPwd').value;
+
+  if (!current || !newPwd || !confirm) { showToast('⚠️ Remplissez tous les champs', true); return; }
+  if (newPwd.length < 6) { showToast('⚠️ Le mot de passe doit contenir au moins 6 caractères', true); return; }
+  if (newPwd !== confirm) { showToast('⚠️ Les mots de passe ne correspondent pas', true); return; }
+
+  const btn = document.getElementById('btnChangePwd');
+  btn.disabled = true; btn.textContent = 'Changement en cours...';
+
+  try {
+    // Ré-authentifier avant de changer le mot de passe (obligatoire Firebase)
+    const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, current);
+    await currentUser.reauthenticateWithCredential(credential);
+
+    // Changer le mot de passe
+    await currentUser.updatePassword(newPwd);
+
+    // Vider les champs
+    document.getElementById('inputCurrentPwd').value = '';
+    document.getElementById('inputNewPwd').value     = '';
+    document.getElementById('inputConfirmPwd').value = '';
+    document.getElementById('pwdStrength').className = 'pwd-strength';
+    document.getElementById('pwdLabel').textContent  = '';
+
+    showToast('✅ Mot de passe changé avec succès !');
+  } catch(e) {
+    const msgs = {
+      'auth/wrong-password':      '❌ Mot de passe actuel incorrect.',
+      'auth/weak-password':       '❌ Nouveau mot de passe trop faible.',
+      'auth/requires-recent-login':'❌ Session expirée. Reconnectez-vous.',
+    };
+    showToast(msgs[e.code] || '❌ Erreur : ' + e.message, true);
+  } finally {
+    btn.disabled = false; btn.textContent = '🔑 Changer le mot de passe';
+  }
+}
+
+// ── Indicateur de force du mot de passe ──
+function checkStrength(pwd) {
+  const bar   = document.getElementById('pwdStrength');
+  const label = document.getElementById('pwdLabel');
+  if (!pwd) { bar.className = 'pwd-strength'; label.textContent = ''; return; }
+
+  const hasUpper  = /[A-Z]/.test(pwd);
+  const hasLower  = /[a-z]/.test(pwd);
+  const hasNumber = /\d/.test(pwd);
+  const hasSpec   = /[^A-Za-z0-9]/.test(pwd);
+  const score = [pwd.length >= 8, hasUpper, hasLower, hasNumber, hasSpec].filter(Boolean).length;
+
+  if (score <= 2) {
+    bar.className = 'pwd-strength weak'; label.className = 'pwd-label weak'; label.textContent = 'Faible';
+  } else if (score <= 3) {
+    bar.className = 'pwd-strength medium'; label.className = 'pwd-label medium'; label.textContent = 'Moyen';
+  } else {
+    bar.className = 'pwd-strength strong'; label.className = 'pwd-label strong'; label.textContent = 'Fort ✓';
+  }
+}
+
+// ── Charger la liste des résidents pour le transfert Syndic ──
+// ── Charger et afficher la config urgence (Syndic) ──
+async function chargerConfigUrgence() {
+  if (currentProfile !== 'syndic') return;
+  document.getElementById('cardUrgence').style.display = 'block';
+  try {
+    const snap = await db.collection('config').doc('urgence').get();
+    if (snap.exists) {
+      document.getElementById('inputUrgenceTel').value = snap.data().telephone || '';
+      document.getElementById('inputUrgenceNom').value = snap.data().nomSyndic || '';
+    }
+  } catch(e) {}
+}
+
+// ── Sauvegarder le numéro d'urgence ──
+async function saveUrgence() {
+  const tel = document.getElementById('inputUrgenceTel').value.trim();
+  const nom = document.getElementById('inputUrgenceNom').value.trim();
+  if (!tel) { showToast('⚠️ Numéro obligatoire', true); return; }
+  const btn = document.getElementById('btnSaveUrgence');
+  btn.disabled = true; btn.textContent = 'Enregistrement...';
+  try {
+    await db.collection('config').doc('urgence').set({
+      telephone: tel,
+      nomSyndic: nom || currentUser.displayName || 'Syndic',
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedBy: currentUser.uid
+    });
+    showToast('✅ Numéro d\'urgence enregistré ! Visible sur la page Incidents.');
+  } catch(e) {
+    showToast('❌ Erreur : ' + e.message, true);
+  } finally {
+    btn.disabled = false; btn.textContent = '🚨 Enregistrer le numéro d\'urgence';
+  }
+}
+
+async function chargerResidentsPourTransfert() {
+  if (currentProfile !== 'syndic') return;
+
+  // Afficher la carte
+  document.getElementById('cardTransfertSyndic').style.display = 'block';
+
+  // Charger tous les résidents sauf le Syndic actuel
+  const snap = await db.collection('users').get();
+  const residents = snap.docs
+    .map(d => ({ uid: d.id, ...d.data() }))
+    .filter(u => u.uid !== currentUser.uid);
+
+  const select = document.getElementById('selectNouveauSyndic');
+  select.innerHTML = '<option value="">-- Choisir un résident --</option>' +
+    residents.map(u => {
+      const nom = `${u.prenom||''} ${u.nom||''}`.trim() || u.email;
+      const profil = { syndic:'Syndic', proprietaire:'Copropriétaire', coproprietaire:'Copropriétaire', conseil:'Conseil Syndical', locataire:'Locataire' }[u.profile] || u.profile;
+      return `<option value="${u.uid}" data-nom="${nom}">${nom} — ${profil}</option>`;
+    }).join('');
+
+  // Mettre à jour le texte de prévisualisation
+  select.addEventListener('change', () => {
+    const nom = select.options[select.selectedIndex]?.dataset?.nom || 'Le résident sélectionné';
+    document.getElementById('nouveauSyndicNom').textContent = nom;
+  });
+}
+
+// ── Transférer les droits Syndic ──
+async function transfererSyndic() {
+  const nouveauUid = document.getElementById('selectNouveauSyndic').value;
+  const pwd        = document.getElementById('inputConfirmSyndicPwd').value;
+  const select     = document.getElementById('selectNouveauSyndic');
+  const nouveauNom = select.options[select.selectedIndex]?.dataset?.nom || '—';
+
+  if (!nouveauUid) { showToast('⚠️ Sélectionnez le nouveau Syndic', true); return; }
+  if (!pwd)        { showToast('⚠️ Confirmez avec votre mot de passe', true); return; }
+
+  if (!confirm(`Confirmer le transfert des droits Syndic à ${nouveauNom} ?\n\nVous deviendrez Copropriétaire. Cette action est irréversible.`)) return;
+
+  const btn = document.getElementById('btnTransfererSyndic');
+  btn.disabled = true; btn.textContent = 'Transfert en cours...';
+
+  try {
+    // Ré-authentifier pour confirmer l'identité
+    const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, pwd);
+    await currentUser.reauthenticateWithCredential(credential);
+
+    // Opération atomique : batch Firestore
+    const batch = db.batch();
+
+    // Nouveau Syndic
+    batch.update(db.collection('users').doc(nouveauUid), {
+      profile: 'syndic',
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // Ancien Syndic → Copropriétaire
+    batch.update(db.collection('users').doc(currentUser.uid), {
+      profile: 'proprietaire',
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // Journaliser le transfert
+    const logRef = db.collection('historique_transferts').doc();
+    batch.set(logRef, {
+      type:           'transfert_syndic',
+      ancienSyndicUid: currentUser.uid,
+      ancienSyndicEmail: currentUser.email,
+      nouveauSyndicUid: nouveauUid,
+      nouveauSyndicNom: nouveauNom,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    await batch.commit();
+
+    showToast(`✅ Droits transférés à ${nouveauNom} ! Vous êtes maintenant Copropriétaire.`);
+
+    // Mettre à jour l'affichage et déconnecter après 3 secondes
+    setTimeout(async () => {
+      await auth.signOut();
+      window.location.href = 'login.html';
+    }, 3000);
+
+  } catch(e) {
+    const msgs = {
+      'auth/wrong-password':       '❌ Mot de passe incorrect.',
+      'auth/requires-recent-login':'❌ Session expirée. Reconnectez-vous.',
+    };
+    showToast(msgs[e.code] || '❌ Erreur : ' + e.message, true);
+    btn.disabled = false; btn.textContent = '🏛️ Transférer les droits Syndic';
+  }
+}
+
+let toastTimer;
+function showToast(msg, isErr=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isErr ? ' error' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 4000);
+}
+</script>
+</body>
+</html>

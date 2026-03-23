@@ -404,14 +404,18 @@ async function handleLogin() {
     await auth.setPersistence(getAuthPersistence());
     const cred = await auth.signInWithEmailAndPassword(email, pwd);
 
-    // Met à jour le profil sélectionné dans Firestore
+    // Récupérer le vrai profil depuis Firestore (ne pas l'écraser)
+    const userSnap = await db.collection('users').doc(cred.user.uid).get();
+    const realProfile = userSnap.exists ? (userSnap.data().profile || selectedProfile) : selectedProfile;
+
+    // Mettre à jour uniquement lastLogin
     await db.collection('users').doc(cred.user.uid).set(
-      { profile: selectedProfile, lastLogin: firebase.firestore.FieldValue.serverTimestamp() },
+      { lastLogin: firebase.firestore.FieldValue.serverTimestamp() },
       { merge: true }
     );
 
     showAlert('success', '✅', 'Connexion réussie ! Redirection...');
-    setTimeout(() => { window.location.href = `dashboard.html?profile=${selectedProfile}`; }, 1200);
+    setTimeout(() => { window.location.href = `dashboard.html?profile=${realProfile}`; }, 1200);
 
   } catch (err) {
     setLoading(false);
@@ -427,10 +431,20 @@ async function handleGoogleLogin() {
     const result = await auth.signInWithPopup(provider);
     const user   = result.user;
 
-    // Créer/mettre à jour le doc Firestore
     const userRef = db.collection('users').doc(user.uid);
     const snap    = await userRef.get();
+
     if (!snap.exists) {
+      // Nouveau compte — vérifier si le profil Syndic est déjà pris
+      if (selectedProfile === 'syndic') {
+        const syndicSnap = await db.collection('users').where('profile','==','syndic').get();
+        if (!syndicSnap.empty) {
+          await auth.signOut();
+          showAlert('error', '⚠️', 'Un compte Syndic existe déjà. Veuillez vous connecter avec votre compte existant.');
+          return;
+        }
+      }
+      // Créer le profil
       await userRef.set({
         nom:       user.displayName || '',
         email:     user.email,
@@ -438,7 +452,12 @@ async function handleGoogleLogin() {
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
     } else {
-      await userRef.update({ profile: selectedProfile, lastLogin: firebase.firestore.FieldValue.serverTimestamp() });
+      // Compte existant — on garde son profil Firestore, on ne l'écrase PAS
+      const existingProfile = snap.data().profile || selectedProfile;
+      await userRef.update({ lastLogin: firebase.firestore.FieldValue.serverTimestamp() });
+      showAlert('success', '✅', 'Connexion Google réussie ! Redirection...');
+      setTimeout(() => { window.location.href = `dashboard.html?profile=${existingProfile}`; }, 1200);
+      return;
     }
 
     showAlert('success', '✅', 'Connexion Google réussie ! Redirection...');
