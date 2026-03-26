@@ -5,18 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CoproGest — Système de gestion de copropriété</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --navy: #0a0f1e;
-    --card: #141d30;
-    --card2: #1a2540;
+    --navy: #0055b3;
+    --card: #0066cc;
+    --card2: #0077e6;
     --border: rgba(99,130,255,0.15);
     --accent: #5b7fff;
     --accent2: #7c5cfc;
     --accent3: #38d9a9;
     --text: #e8eaf6;
-    --muted: #8892b0;
+    --muted: #d4ecff;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html { scroll-behavior: smooth; }
@@ -394,7 +395,37 @@
       </div>
       <div class="form-group">
         <label>Adresse email *</label>
-        <input type="email" class="form-input" id="adh-email" placeholder="jean@exemple.fr">
+        <div style="display:flex;gap:.5rem">
+          <input type="email" class="form-input" id="adh-email" placeholder="jean@exemple.fr" style="flex:1">
+          <button id="btnEnvoyerCode" onclick="envoyerCode()"
+            style="padding:.6rem 1rem;border-radius:8px;border:none;background:linear-gradient(135deg,#5b7fff,#7c5cfc);color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;white-space:nowrap;display:flex;align-items:center">
+            📨 Envoyer le code
+          </button>
+        </div>
+      </div>
+
+      <!-- Section vérification code -->
+      <div id="verif-section" style="display:none">
+        <div style="background:rgba(255,255,255,.05);border:1px solid rgba(91,127,255,.2);border-radius:10px;padding:.8rem 1rem;margin-bottom:.8rem;font-size:.84rem;color:#b8d4f8">
+          📧 Un code à 6 chiffres a été envoyé à votre email. Vérifiez vos spams si nécessaire.
+        </div>
+        <div class="form-group">
+          <label>Code de vérification *</label>
+          <div style="display:flex;gap:.5rem">
+            <input type="text" class="form-input" id="adh-code" placeholder="000000" maxlength="6"
+              style="flex:1;letter-spacing:.3em;font-size:1.1rem;text-align:center"
+              oninput="if(this.value.length===6) verifierCode()">
+            <button onclick="verifierCode()"
+              style="padding:.6rem 1rem;border-radius:8px;border:none;background:linear-gradient(135deg,#38d9a9,#2fb898);color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;white-space:nowrap">
+              ✓ Vérifier
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Confirmation email vérifié -->
+      <div id="verif-ok" style="display:none;align-items:center;gap:.5rem;background:rgba(56,217,169,.08);border:1px solid rgba(56,217,169,.2);border-radius:8px;padding:.6rem 1rem;margin-bottom:.5rem;font-size:.85rem;color:#38d9a9">
+        ✅ Email vérifié avec succès
       </div>
       <div class="form-group">
         <label>Téléphone</label>
@@ -465,31 +496,119 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
+  emailjs.init('ayGABGXa0pHYR5wGt');
+
+  const EMAILJS_SERVICE  = 'service_r4mqekz';
+  const EMAILJS_TPL_OTP  = 'template_qc2c0qo';
+
+  let emailVerifie = false;
+
   // ── Vérification setup au chargement ──
-  // Si aucun Syndic n'existe encore → rediriger vers setup.html
   window.addEventListener('load', async () => {
     try {
       const snap = await db.collection('config').doc('setup').get();
       if (!snap.exists || snap.data().setupDone !== true) {
         window.location.href = 'setup.html';
       }
-    } catch(e) {
-      // En cas d'erreur réseau, on laisse la page s'afficher normalement
-    }
+    } catch(e) {}
   });
 
-  // Déconnecter puis aller à login
   async function goToLogin() {
     try { await auth.signOut(); } catch(e) {}
     window.location.href = 'login.html';
   }
 
-  // Déconnecter puis aller à register
   async function goToRegister() {
     try { await auth.signOut(); } catch(e) {}
     window.location.href = 'register.html';
+  }
+
+  // ── Envoyer le code de vérification ──
+  async function envoyerCode() {
+    const email = document.getElementById('adh-email').value.trim();
+    const nom   = document.getElementById('adh-nom').value.trim();
+
+    if (!nom) { showToast('⚠️ Saisissez votre nom d\'abord'); return; }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showToast('⚠️ Adresse email invalide'); return;
+    }
+
+    const btn = document.getElementById('btnEnvoyerCode');
+    btn.disabled = true; btn.textContent = 'Envoi en cours...';
+    emailVerifie = false;
+
+    // Générer un code à 6 chiffres
+    const code   = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    try {
+      // Stocker le code dans Firestore — pas visible dans la console navigateur
+      await db.collection('verifications').doc(email.replace(/\./g,'_')).set({
+        code, expiry, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      await emailjs.send(EMAILJS_SERVICE, EMAILJS_TPL_OTP, {
+        email_destinataire: email,
+        to_email: email,
+        to_name: nom.split(' ')[0],
+        prenom: nom.split(' ')[0],
+        passcode: code,
+        code: code,
+        time: new Date(expiry).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})
+      });
+
+      document.getElementById('verif-section').style.display = 'block';
+      document.getElementById('adh-email').readOnly = true;
+      showToast('✅ Code envoyé à ' + email + ' ! Vérifiez vos spams.');
+
+      // Compte à rebours 60s
+      let countdown = 60;
+      btn.textContent = `Renvoyer dans ${countdown}s`;
+      const timer = setInterval(() => {
+        countdown--;
+        btn.textContent = `Renvoyer dans ${countdown}s`;
+        if (countdown <= 0) {
+          clearInterval(timer);
+          btn.disabled = false;
+          btn.textContent = '🔄 Renvoyer le code';
+        }
+      }, 1000);
+
+    } catch(e) {
+      showToast('❌ Erreur : ' + (e.text || e.message || 'Vérifiez votre connexion'));
+      btn.disabled = false;
+      btn.textContent = '📨 Envoyer le code';
+    }
+  }
+
+  // ── Vérifier le code saisi (lecture depuis Firestore) ──
+  async function verifierCode() {
+    const saisi = document.getElementById('adh-code').value.trim();
+    const email = document.getElementById('adh-email').value.trim();
+    if (!saisi || !email) return;
+
+    try {
+      const snap = await db.collection('verifications').doc(email.replace(/\./g,'_')).get();
+      if (!snap.exists) { showToast('⚠️ Demandez d\'abord un code'); return; }
+
+      const { code, expiry } = snap.data();
+      if (Date.now() > expiry) { showToast('❌ Code expiré. Demandez un nouveau code.'); return; }
+      if (saisi !== code)      { showToast('❌ Code incorrect. Réessayez.'); return; }
+
+      // Supprimer le code après validation
+      await db.collection('verifications').doc(email.replace(/\./g,'_')).delete();
+
+      emailVerifie = true;
+      document.getElementById('verif-section').style.display = 'none';
+      document.getElementById('verif-ok').style.display = 'flex';
+      document.getElementById('btnEnvoyerCode').style.display = 'none';
+      showToast('✅ Email vérifié avec succès !');
+
+    } catch(e) {
+      showToast('❌ Erreur vérification : ' + e.message);
+    }
   }
 
   // ── Envoyer demande d'adhésion ──
@@ -504,32 +623,42 @@
       showToast('⚠️ Veuillez remplir les champs obligatoires (*)');
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      showToast('⚠️ Adresse email invalide');
+    if (!emailVerifie) {
+      showToast('⚠️ Veuillez vérifier votre email avant d\'envoyer la demande');
       return;
     }
+
+    const btn = document.querySelector('.btn-send');
+    btn.disabled = true; btn.textContent = 'Envoi en cours...';
 
     try {
       await db.collection('demandes').add({
         nom, email, tel, lot, message,
         statut: 'en_attente',
+        emailVerifie: true,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-      // Vider le formulaire
-      ['adh-nom','adh-email','adh-tel','adh-lot','adh-message'].forEach(id => {
-        document.getElementById(id).value = '';
+      ['adh-nom','adh-email','adh-tel','adh-lot','adh-message','adh-code'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.value = ''; el.readOnly = false; }
       });
-      showToast('✅ Demande envoyée ! Le Syndic vous contactera bientôt.');
+      emailVerifie = false; codeVerif = null;
+      document.getElementById('verif-ok').style.display = 'none';
+      document.getElementById('btnEnvoyerCode').style.display = 'flex';
+      showToast('✅ Demande envoyée ! Le Syndic vous contactera bientôt par email.');
     } catch(e) {
       showToast('❌ Erreur lors de l\'envoi. Réessayez.');
+    } finally {
+      btn.disabled = false; btn.textContent = '📨 Envoyer ma demande';
     }
   }
+
   let toastTimer;
   function showToast(msg) {
     const t = document.getElementById('toast');
     t.textContent = msg; t.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 4000);
   }
 </script>
 </body>

@@ -4,42 +4,53 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CoproGest — Demandes d'adhésion</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
-:root{--navy:#0a0f1e;--card:#141d30;--card2:#1a2540;--border:rgba(99,130,255,.15);--accent:#5b7fff;--accent2:#7c5cfc;--accent3:#38d9a9;--text:#e8eaf6;--muted:#8892b0;--danger:#ff6b6b;--gold:#ffd166;}
+:root{
+  --navy:#0044a0;--card:#00368a;--card2:#004aab;--card3:#0055b3;
+  --accent:#00d4aa;--accent2:#00b4d8;--accent3:#00d4aa;--accent4:#7dd3fc;
+  --border:rgba(255,255,255,.12);--border2:rgba(0,180,216,.15);--border-hover:rgba(0,212,170,.5);
+  --text:#ffffff;--text2:#e2f0ff;--muted:#b8d4f8;--muted2:#98c4f0;
+  --danger:#f87171;--gold:#fbbf24;--success:#34d399;--purple:#a78bfa;
+  --grad-main:linear-gradient(135deg,#00d4aa,#00b4d8);
+  --grad-accent:linear-gradient(135deg,#00d4aa 0%,#0ea5e9 100%);
+  --font-head:'Space Grotesk',sans-serif;
+  --font-body:'Plus Jakarta Sans',sans-serif;
+  --shadow-accent:0 4px 20px rgba(0,212,170,.2);
+}
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text);min-height:100vh;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--navy);color:var(--text);min-height:100vh;}
 .sidebar{position:fixed;left:0;top:0;bottom:0;width:240px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:1.5rem 0;z-index:50;}
 .sidebar-footer{margin-top:auto;padding:1.5rem;border-top:1px solid var(--border);}
 .nav-item{display:flex;align-items:center;gap:.75rem;padding:.7rem 1.5rem;color:var(--muted);font-size:.88rem;transition:all .2s;border-left:2px solid transparent;text-decoration:none;}
 .nav-item:hover{color:var(--text);background:rgba(255,255,255,.03);}
-.nav-item.active{color:var(--text);background:rgba(91,127,255,.1);border-left-color:var(--accent);}
+.nav-item.active{color:var(--text);background:rgba(255,255,255,.06);border-left-color:var(--accent);}
 .nav-icon{font-size:1.1rem;width:20px;text-align:center;}
-.btn-logout{width:100%;padding:.6rem;border-radius:8px;border:1px solid rgba(255,107,107,.3);background:rgba(255,107,107,.08);color:#ff9999;font-family:'DM Sans',sans-serif;font-size:.83rem;cursor:pointer;transition:background .2s;display:flex;align-items:center;justify-content:center;gap:.5rem;}
+.btn-logout{width:100%;padding:.6rem;border-radius:8px;border:1px solid rgba(255,107,107,.3);background:rgba(255,107,107,.08);color:#ff9999;font-family:'Plus Jakarta Sans',sans-serif;font-size:.83rem;cursor:pointer;transition:background .2s;display:flex;align-items:center;justify-content:center;gap:.5rem;}
 .btn-logout:hover{background:rgba(255,107,107,.15);}
 .main{margin-left:240px;padding:2rem 2.5rem;}
 .page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem;}
-.page-header h1{font-family:'Syne',sans-serif;font-weight:800;font-size:1.6rem;}
+.page-header h1{font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:1.6rem;}
 .page-header p{color:var(--muted);font-size:.92rem;margin-top:.3rem;}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:2rem;}
 .stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.2rem;transition:transform .2s;}
 .stat-card:hover{transform:translateY(-2px);}
-.stat-val{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;}
+.stat-val{font-family:'Space Grotesk',sans-serif;font-size:1.8rem;font-weight:800;}
 .stat-lbl{color:var(--muted);font-size:.78rem;margin-top:.2rem;}
 .tabs{display:flex;gap:.4rem;margin-bottom:1.5rem;background:var(--card);padding:.4rem;border-radius:10px;width:fit-content;}
-.tab-btn{padding:.55rem 1.2rem;border-radius:7px;border:none;background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:500;cursor:pointer;transition:all .15s;}
+.tab-btn{padding:.55rem 1.2rem;border-radius:7px;border:none;background:transparent;color:var(--muted);font-family:'Plus Jakarta Sans',sans-serif;font-size:.85rem;font-weight:500;cursor:pointer;transition:all .15s;}
 .tab-btn.active{background:var(--accent);color:#fff;font-weight:600;}
 .demandes-list{display:flex;flex-direction:column;gap:1rem;}
 .demande-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.4rem;animation:fadeUp .3s ease both;transition:border-color .2s;}
-.demande-card:hover{border-color:rgba(91,127,255,.3);}
+.demande-card:hover{border-color:rgba(0,212,170,.3);}
 .demande-card.en_attente{border-left:4px solid var(--gold);}
 .demande-card.approuve{border-left:4px solid var(--accent3);}
 .demande-card.refuse{border-left:4px solid var(--danger);}
 .demande-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem;}
-.demande-name{font-family:'Syne',sans-serif;font-weight:700;font-size:1.05rem;}
+.demande-name{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.05rem;}
 .badge{display:inline-flex;padding:.25rem .7rem;border-radius:20px;font-size:.72rem;font-weight:600;}
 .badge-attente{background:rgba(255,209,102,.12);color:var(--gold);}
 .badge-approuve{background:rgba(56,217,169,.12);color:var(--accent3);}
@@ -50,16 +61,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text);m
 .info-value{color:var(--text);}
 .demande-message{background:var(--card2);border-radius:8px;padding:.8rem 1rem;font-size:.84rem;color:var(--muted);margin-bottom:1rem;line-height:1.6;}
 .demande-actions{display:flex;gap:.6rem;flex-wrap:wrap;}
-.btn-approve{padding:.55rem 1.2rem;border-radius:8px;border:1px solid rgba(56,217,169,.3);background:rgba(56,217,169,.1);color:var(--accent3);font-family:'DM Sans',sans-serif;font-size:.84rem;font-weight:600;cursor:pointer;transition:all .2s;}
+.btn-approve{padding:.55rem 1.2rem;border-radius:8px;border:1px solid rgba(56,217,169,.3);background:rgba(56,217,169,.1);color:var(--accent3);font-family:'Plus Jakarta Sans',sans-serif;font-size:.84rem;font-weight:600;cursor:pointer;transition:all .2s;}
 .btn-approve:hover{background:rgba(56,217,169,.2);}
-.btn-refuse{padding:.55rem 1.2rem;border-radius:8px;border:1px solid rgba(255,107,107,.2);background:transparent;color:var(--danger);font-family:'DM Sans',sans-serif;font-size:.84rem;font-weight:500;cursor:pointer;transition:all .2s;}
+.btn-refuse{padding:.55rem 1.2rem;border-radius:8px;border:1px solid rgba(255,107,107,.2);background:transparent;color:var(--danger);font-family:'Plus Jakarta Sans',sans-serif;font-size:.84rem;font-weight:500;cursor:pointer;transition:all .2s;}
 .btn-refuse:hover{background:rgba(255,107,107,.1);}
-.btn-create-account{padding:.55rem 1.2rem;border-radius:8px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-family:'DM Sans',sans-serif;font-size:.84rem;font-weight:600;cursor:pointer;transition:opacity .2s;}
+.btn-create-account{padding:.55rem 1.2rem;border-radius:8px;border:none;background:linear-gradient(135deg,#00d4aa,#0ea5e9);color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:.84rem;font-weight:600;cursor:pointer;transition:opacity .2s;}
 .btn-create-account:hover{opacity:.85;}
 .demande-date{font-size:.76rem;color:var(--muted);}
 .empty-state{text-align:center;padding:4rem 2rem;color:var(--muted);}
 .empty-icon{font-size:3rem;margin-bottom:1rem;opacity:.4;}
-.empty-state h3{font-family:'Syne',sans-serif;font-size:1.1rem;color:var(--text);margin-bottom:.5rem;}
+.empty-state h3{font-family:'Space Grotesk',sans-serif;font-size:1.1rem;color:var(--text);margin-bottom:.5rem;}
 .loading-screen{position:fixed;inset:0;background:var(--navy);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:1rem;}
 .spinner{width:44px;height:44px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
 .loading-text{color:var(--muted);font-size:.9rem;}
@@ -72,16 +83,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text);m
 .modal-box{background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:2rem;max-width:500px;width:100%;max-height:90vh;overflow-y:auto;transform:translateY(20px);transition:transform .25s;}
 .modal-overlay.show .modal-box{transform:translateY(0);}
 .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;}
-.modal-header h2{font-family:'Syne',sans-serif;font-weight:800;font-size:1.15rem;}
+.modal-header h2{font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:1.15rem;}
 .modal-close{background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;}
 .form-group{display:flex;flex-direction:column;gap:.4rem;margin-bottom:1rem;}
 .form-label{font-size:.75rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);}
-.form-input,.form-select{width:100%;padding:.8rem 1rem;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.9rem;transition:border-color .2s;}
+.form-input,.form-select{width:100%;padding:.8rem 1rem;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:.9rem;transition:border-color .2s;}
 .form-input:focus,.form-select:focus{outline:none;border-color:var(--accent);}
 .form-input::placeholder{color:var(--muted);}
 .form-select option{background:var(--card2);}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
-.btn-submit{width:100%;padding:.88rem;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-family:'DM Sans',sans-serif;font-weight:600;font-size:1rem;cursor:pointer;margin-top:.5rem;transition:opacity .2s;}
+.btn-submit{width:100%;padding:.88rem;border-radius:10px;border:none;background:linear-gradient(135deg,#00d4aa,#0ea5e9);color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;font-size:1rem;cursor:pointer;margin-top:.5rem;transition:opacity .2s;}
 .btn-submit:hover{opacity:.9;}
 .btn-submit:disabled{opacity:.5;cursor:not-allowed;}
 @media(max-width:900px){.sidebar{display:none;}.main{margin-left:0;padding:1.5rem;}}
@@ -171,7 +182,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text);m
 <div class="toast" id="toast"></div>
 <script src="sidebar.js"></script>
 <script src="firebase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
+emailjs.init('ayGABGXa0pHYR5wGt');
+const EMAILJS_SERVICE  = 'service_r4mqekz';
+const EMAILJS_TPL_DEC  = 'template_7e4ycrd';
 let currentUser = null;
 let allDemandes = [];
 let currentTab = 'en_attente';
@@ -328,8 +343,23 @@ async function creerCompte() {
     await secondaryAuth.signOut();
     await secondaryApp.delete();
 
+    // Envoyer email de notification d'approbation
+    try {
+      const syndicSnap = await db.collection('users').doc(currentUser.uid).get();
+      const syndicNom  = syndicSnap.exists ? `${syndicSnap.data().prenom||''} ${syndicSnap.data().nom||''}`.trim() : 'Le Syndic';
+      await emailjs.send(EMAILJS_SERVICE, EMAILJS_TPL_DEC, {
+        email_destinataire: email,
+        prenom: prenom,
+        message: '🎉 Félicitations ! Votre demande d\'adhésion à la copropriété a été ACCEPTÉE.',
+        instructions: `Votre compte a été créé avec les informations suivantes :\n\n• Email : ${email}\n• Mot de passe temporaire : ${pwd}\n• Profil : ${profile}\n\nConnectez-vous sur : https://coprogest-effcb.web.app/login.html\n\nNous vous recommandons de changer votre mot de passe après la première connexion.`,
+        syndic_nom: syndicNom
+      });
+    } catch(emailErr) {
+      console.warn('Email notification failed:', emailErr);
+    }
+
     closeModal();
-    showToast(`✅ Compte créé pour ${prenom} ${nom} !`);
+    showToast(`✅ Compte créé pour ${prenom} ${nom} ! Email de confirmation envoyé.`);
   } catch(e) {
     const msgs = {
       'auth/email-already-in-use': '⚠️ Cet email est déjà utilisé.',
@@ -345,11 +375,33 @@ async function creerCompte() {
 // ── Refuser une demande ──
 async function refuserDemande(id) {
   if (!confirm('Refuser cette demande ?')) return;
+  const demande = allDemandes.find(d => d.id === id);
+
   await db.collection('demandes').doc(id).update({
     statut: 'refuse',
     refuseAt: firebase.firestore.FieldValue.serverTimestamp()
   });
-  showToast('Demande refusée.');
+
+  // Envoyer email de notification de refus
+  if (demande?.email) {
+    try {
+      const syndicSnap = await db.collection('users').doc(currentUser.uid).get();
+      const syndicNom  = syndicSnap.exists ? `${syndicSnap.data().prenom||''} ${syndicSnap.data().nom||''}`.trim() : 'Le Syndic';
+      const prenom = (demande.nom||'').split(' ')[0] || 'Madame/Monsieur';
+      await emailjs.send(EMAILJS_SERVICE, EMAILJS_TPL_DEC, {
+        email_destinataire: demande.email,
+        prenom: prenom,
+        message: 'Nous avons bien reçu votre demande d\'adhésion à la copropriété. Après examen de votre dossier, nous sommes dans le regret de vous informer que votre demande n\'a pas pu être acceptée à ce stade.',
+        instructions: 'Pour plus d\'informations sur les raisons de ce refus ou pour soumettre un nouveau dossier, veuillez contacter le Syndic directement par téléphone ou par email.',
+        syndic_nom: syndicNom
+      });
+      showToast('Demande refusée. Email de notification envoyé.');
+    } catch(e) {
+      showToast('Demande refusée. (Email non envoyé)');
+    }
+  } else {
+    showToast('Demande refusée.');
+  }
 }
 
 function closeModal() { document.getElementById('createModal').classList.remove('show'); }

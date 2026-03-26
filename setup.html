@@ -4,14 +4,25 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CoproGest — Configuration initiale</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
-:root{--navy:#0a0f1e;--card:#141d30;--card2:#1a2540;--border:rgba(99,130,255,.15);--accent:#5b7fff;--accent2:#7c5cfc;--accent3:#38d9a9;--text:#e8eaf6;--muted:#8892b0;--danger:#ff6b6b;--gold:#ffd166;}
+:root{
+  --navy:#0044a0;--card:#00368a;--card2:#004aab;--card3:#0055b3;
+  --accent:#00d4aa;--accent2:#00b4d8;--accent3:#00d4aa;--accent4:#7dd3fc;
+  --border:rgba(255,255,255,.12);--border2:rgba(0,180,216,.15);--border-hover:rgba(0,212,170,.5);
+  --text:#ffffff;--text2:#e2f0ff;--muted:#b8d4f8;--muted2:#98c4f0;
+  --danger:#f87171;--gold:#fbbf24;--success:#34d399;--purple:#a78bfa;
+  --grad-main:linear-gradient(135deg,#00d4aa,#00b4d8);
+  --grad-accent:linear-gradient(135deg,#00d4aa 0%,#0ea5e9 100%);
+  --font-head:'Space Grotesk',sans-serif;
+  --font-body:'Plus Jakarta Sans',sans-serif;
+  --shadow-accent:0 4px 20px rgba(0,212,170,.2);
+}
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'DM Sans',sans-serif;background:radial-gradient(ellipse 60% 50% at 50% 0%,rgba(91,127,255,.18) 0%,transparent 60%),var(--navy);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(ellipse 60% 50% at 50% 0%,rgba(91,127,255,.18) 0%,transparent 60%),var(--navy);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;}
 
 /* CARD */
 .card{width:100%;max-width:520px;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:2.5rem;animation:fadeUp .5s ease both;}
@@ -30,15 +41,15 @@ body{font-family:'DM Sans',sans-serif;background:radial-gradient(ellipse 60% 50%
 
 /* HEADER */
 .header{text-align:center;margin-bottom:2rem;}
-.header-icon{width:72px;height:72px;border-radius:20px;margin:0 auto 1rem;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:2.2rem;box-shadow:0 8px 32px rgba(91,127,255,.4);}
-.header h1{font-family:'Syne',sans-serif;font-weight:800;font-size:1.5rem;margin-bottom:.3rem;}
+.header-icon{width:72px;height:72px;border-radius:20px;margin:0 auto 1rem;background:linear-gradient(135deg,#00d4aa,#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:2.2rem;box-shadow:0 8px 32px rgba(91,127,255,.4);}
+.header h1{font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:1.5rem;margin-bottom:.3rem;}
 .header p{color:var(--muted);font-size:.88rem;line-height:1.6;}
 
 /* BADGE */
 .setup-badge{display:inline-flex;align-items:center;gap:.5rem;padding:.4rem 1rem;border-radius:99px;background:rgba(56,217,169,.1);border:1px solid rgba(56,217,169,.3);color:var(--accent3);font-size:.78rem;font-weight:500;margin-bottom:1.2rem;}
 
 /* INFO BOX */
-.info-box{background:rgba(91,127,255,.08);border:1px solid rgba(91,127,255,.2);border-radius:10px;padding:1rem;font-size:.84rem;color:var(--muted);line-height:1.7;margin-bottom:1.5rem;}
+.info-box{background:rgba(255,255,255,.05);border:1px solid rgba(91,127,255,.2);border-radius:10px;padding:1rem;font-size:.84rem;color:var(--muted);line-height:1.7;margin-bottom:1.5rem;}
 .info-box strong{color:var(--accent);}
 .info-box ul{margin:.5rem 0 0 1rem;}
 .info-box li{margin-bottom:.25rem;}
@@ -51,7 +62,7 @@ body{font-family:'DM Sans',sans-serif;background:radial-gradient(ellipse 60% 50%
 .flbl{font-size:.76rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);}
 .fw{position:relative;}
 .fi{position:absolute;left:.9rem;top:50%;transform:translateY(-50%);font-size:.95rem;pointer-events:none;}
-.fw input{width:100%;padding:.8rem 1rem .8rem 2.5rem;background:var(--card2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.9rem;transition:border-color .2s;}
+.fw input{width:100%;padding:.8rem 1rem .8rem 2.5rem;background:var(--card2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:.9rem;transition:border-color .2s;}
 .fw input:focus{outline:none;border-color:var(--accent);}
 .fw input::placeholder{color:var(--muted);}
 .fw input.err{border-color:var(--danger);}
@@ -73,10 +84,10 @@ body{font-family:'DM Sans',sans-serif;background:radial-gradient(ellipse 60% 50%
 
 /* BOUTONS */
 .nav-btns{display:flex;gap:.75rem;margin-top:.5rem;}
-.btn-next{flex:1;padding:.88rem;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-family:'DM Sans',sans-serif;font-weight:600;font-size:.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.5rem;transition:opacity .2s,transform .15s;box-shadow:0 6px 20px rgba(91,127,255,.35);}
+.btn-next{flex:1;padding:.88rem;border-radius:10px;border:none;background:linear-gradient(135deg,#00d4aa,#0ea5e9);color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;font-size:.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.5rem;transition:opacity .2s,transform .15s;box-shadow:0 6px 20px rgba(255,255,255,.12);}
 .btn-next:hover{opacity:.9;transform:translateY(-1px);}
 .btn-next:disabled{opacity:.5;cursor:not-allowed;transform:none;}
-.btn-back{padding:.88rem 1.4rem;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-family:'DM Sans',sans-serif;font-weight:500;font-size:.95rem;cursor:pointer;display:none;transition:background .2s;}
+.btn-back{padding:.88rem 1.4rem;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-weight:500;font-size:.95rem;cursor:pointer;display:none;transition:background .2s;}
 .btn-back.show{display:flex;align-items:center;justify-content:center;}
 .btn-back:hover{background:rgba(255,255,255,.05);}
 
@@ -84,9 +95,9 @@ body{font-family:'DM Sans',sans-serif;background:radial-gradient(ellipse 60% 50%
 .success-screen{display:none;text-align:center;padding:1rem 0;}
 .success-screen.visible{display:block;}
 .success-icon{font-size:4rem;margin-bottom:1rem;animation:bounce .6s ease both;}
-.success-screen h2{font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;margin-bottom:.5rem;}
+.success-screen h2{font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:1.4rem;margin-bottom:.5rem;}
 .success-screen p{color:var(--muted);font-size:.9rem;line-height:1.7;margin-bottom:1.5rem;}
-.btn-go{width:100%;padding:.88rem;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-family:'DM Sans',sans-serif;font-weight:600;font-size:1rem;cursor:pointer;transition:opacity .2s;box-shadow:0 6px 20px rgba(91,127,255,.35);}
+.btn-go{width:100%;padding:.88rem;border-radius:10px;border:none;background:linear-gradient(135deg,#00d4aa,#0ea5e9);color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;font-size:1rem;cursor:pointer;transition:opacity .2s;box-shadow:0 6px 20px rgba(255,255,255,.12);}
 .btn-go:hover{opacity:.9;}
 
 /* BLOQUÉ */
@@ -118,7 +129,7 @@ body{font-family:'DM Sans',sans-serif;background:radial-gradient(ellipse 60% 50%
   <!-- Écran bloqué (Syndic déjà existant) -->
   <div class="blocked-screen" id="blockedScreen">
     <div style="font-size:3rem;margin-bottom:1rem">🔒</div>
-    <h2 style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.3rem;margin-bottom:.5rem">Configuration déjà effectuée</h2>
+    <h2 style="font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:1.3rem;margin-bottom:.5rem">Configuration déjà effectuée</h2>
     <p style="color:var(--muted);font-size:.9rem;line-height:1.7;margin-bottom:1.5rem">Un compte Syndic existe déjà.<br>Cette page n'est plus accessible.</p>
     <a href="login.html"><button class="btn-go">← Aller à la connexion</button></a>
   </div>

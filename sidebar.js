@@ -58,14 +58,14 @@ const SIDEBAR_ROLE_LABELS = {
 };
 
 const SIDEBAR_AVATAR_COLORS = {
-  syndic:'#8b5cf6', proprietaire:'#3b82f6', coproprietaire:'#3b82f6', coproprietaire:'#3b82f6',
-  conseil:'#06b6d4', locataire:'#10b981'
+  syndic:'#00d4aa', proprietaire:'#00b4d8', coproprietaire:'#00b4d8', coproprietaire:'#00b4d8',
+  conseil:'#0ea5e9', locataire:'#34d399'
 };
 
 // Génère et injecte la sidebar dans l'élément #sidebar
 function buildSidebar(profile, fullName, email, currentPage) {
   const menu   = SIDEBAR_MENUS[profile] || SIDEBAR_MENUS.locataire;
-  const color  = SIDEBAR_AVATAR_COLORS[profile] || '#3b82f6';
+  const color  = SIDEBAR_AVATAR_COLORS[profile] || '#00b4d8';
   const role   = SIDEBAR_ROLE_LABELS[profile] || profile;
   const page   = currentPage || window.location.pathname.split('/').pop();
 
@@ -82,7 +82,7 @@ function buildSidebar(profile, fullName, email, currentPage) {
     const badgeId  = item.url.replace('.html','');
     navHtml += `<a class="nav-item${isActive?' active':''}" href="${item.url}" style="justify-content:space-between">
       <span style="display:flex;align-items:center;gap:.75rem"><span class="nav-icon">${item.icon}</span>${item.label}</span>
-      <span id="badge-${badgeId}" style="display:none;background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center;flex-shrink:0"></span>
+      <span id="badge-${badgeId}" style="display:none;background:#f87171;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center;flex-shrink:0"></span>
     </a>`;
   });
 
@@ -90,46 +90,46 @@ function buildSidebar(profile, fullName, email, currentPage) {
   if (!sidebar) return;
 
   sidebar.innerHTML = `
-    <div class="sb-header" style="padding:18px 16px 14px;border-bottom:1px solid var(--border,rgba(99,130,255,.15))">
-      <a href="dashboard.html" style="display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--text,#e8eaf6)">
-        <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🏢</div>
+    <div class="sb-header" style="padding:18px 16px 14px;border-bottom:1px solid var(--border,rgba(0,212,170,.25))">
+      <a href="dashboard.html" style="display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--text,#e0f2fe)">
+        <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#00d4aa,#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🏢</div>
         <div>
-          <div style="font-weight:800;font-size:17px;font-family:'Outfit','Syne',sans-serif">CoproGest</div>
-          <div style="color:var(--text-muted,#4b5563);font-size:10px">Gestion copropriété</div>
+          <div style="font-weight:800;font-size:17px;font-family:'Space Grotesk','Syne',sans-serif">CoproGest</div>
+          <div style="color:var(--muted2,#98c4f0);font-size:10px">Gestion copropriété</div>
         </div>
       </a>
     </div>
-    <div style="padding:12px 16px;border-bottom:1px solid var(--border,rgba(99,130,255,.15));display:flex;align-items:center;gap:9px">
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border,rgba(0,212,170,.25));display:flex;align-items:center;gap:9px">
       <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,${color},${color}99);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;flex-shrink:0">${fullName.charAt(0).toUpperCase()}</div>
       <div style="overflow:hidden">
-        <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text,#e8eaf6)">${fullName}</div>
-        <div style="font-size:11px;color:var(--text-muted,#4b5563)">${role}</div>
+        <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text,#e0f2fe)">${fullName}</div>
+        <div style="font-size:11px;color:var(--muted2,#98c4f0)">${role}</div>
       </div>
     </div>
-    <div style="padding:8px 12px;border-bottom:1px solid var(--border,rgba(99,130,255,.15));position:relative">
+    <div style="padding:8px 12px;border-bottom:1px solid var(--border,rgba(0,212,170,.25));position:relative">
       <div style="position:relative">
         <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px;pointer-events:none;opacity:.6">🔍</span>
         <input id="globalSearch" type="text" placeholder="Rechercher..."
-          style="width:100%;padding:7px 10px 7px 30px;background:var(--card2,#1a2540);border:1px solid var(--border,rgba(99,130,255,.15));border-radius:8px;color:var(--text,#e8eaf6);font-size:12px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s"
-          onfocus="this.style.borderColor='#5b7fff';document.getElementById('searchResults').style.display=this.value.length>1?'block':'none'"
+          style="width:100%;padding:7px 10px 7px 30px;background:var(--card2,#004aab);border:1px solid var(--border,rgba(0,212,170,.25));border-radius:8px;color:var(--text,#e0f2fe);font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;outline:none;transition:border-color .2s"
+          onfocus="this.style.borderColor='#00d4aa';document.getElementById('searchResults').style.display=this.value.length>1?'block':'none'"
           onkeydown="if(event.key==='Escape'){document.getElementById('searchResults').style.display='none';this.blur()}"
           oninput="globalSearchHandler(this.value)">
       </div>
-      <div id="searchResults" style="display:none;position:absolute;left:12px;right:12px;top:44px;background:var(--card2,#1a2540);border:1px solid var(--border,rgba(99,130,255,.15));border-radius:10px;z-index:9999;max-height:320px;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.6)"></div>
+      <div id="searchResults" style="display:none;position:absolute;left:12px;right:12px;top:44px;background:var(--card2,#004aab);border:1px solid var(--border,rgba(0,212,170,.25));border-radius:10px;z-index:9999;max-height:320px;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.6)"></div>
     </div>
     <nav style="flex:1;padding:10px 8px;overflow-y:auto">
       ${navHtml}
     </nav>
-    <div style="padding:12px 16px;border-top:1px solid var(--border,rgba(99,130,255,.15));margin-top:auto">
-      <a href="profil.html" style="display:flex;align-items:center;gap:8px;width:100%;padding:9px 12px;border-radius:8px;background:transparent;border:1px solid var(--border,rgba(99,130,255,.15));color:var(--text-muted,#4b5563);font-size:13px;cursor:pointer;transition:all .2s;font-family:'Outfit','DM Sans',sans-serif;text-decoration:none;margin-bottom:8px"
-        onmouseover="this.style.background='rgba(91,127,255,.1)';this.style.color='#5b7fff';this.style.borderColor='rgba(91,127,255,.3)'"
-        onmouseout="this.style.background='transparent';this.style.color='var(--text-muted,#4b5563)';this.style.borderColor='var(--border,rgba(99,130,255,.15))'">
+    <div style="padding:12px 16px;border-top:1px solid var(--border,rgba(0,212,170,.25));margin-top:auto">
+      <a href="profil.html" style="display:flex;align-items:center;gap:8px;width:100%;padding:9px 12px;border-radius:8px;background:transparent;border:1px solid var(--border,rgba(0,212,170,.25));color:var(--muted2,#98c4f0);font-size:13px;cursor:pointer;transition:all .2s;font-family:'Space Grotesk','Plus Jakarta Sans',sans-serif;text-decoration:none;margin-bottom:8px"
+        onmouseover="this.style.background='rgba(255,255,255,.06)';this.style.color='#00d4aa';this.style.borderColor='rgba(0,212,170,.3)'"
+        onmouseout="this.style.background='transparent';this.style.color='var(--muted2,#98c4f0)';this.style.borderColor='var(--border,rgba(0,212,170,.25))'">
         👤 Mon profil
       </a>
       <button onclick="auth.signOut().then(()=>window.location.href='login.html')"
-        style="display:flex;align-items:center;gap:8px;width:100%;padding:9px 12px;border-radius:8px;background:transparent;border:1px solid var(--border,rgba(99,130,255,.15));color:var(--text-muted,#4b5563);font-size:13px;cursor:pointer;transition:all .2s;font-family:'Outfit','DM Sans',sans-serif"
-        onmouseover="this.style.background='rgba(239,68,68,.12)';this.style.color='#ef4444';this.style.borderColor='rgba(239,68,68,.3)'"
-        onmouseout="this.style.background='transparent';this.style.color='var(--text-muted,#4b5563)';this.style.borderColor='var(--border,rgba(99,130,255,.15))'">
+        style="display:flex;align-items:center;gap:8px;width:100%;padding:9px 12px;border-radius:8px;background:transparent;border:1px solid var(--border,rgba(0,212,170,.25));color:var(--muted2,#98c4f0);font-size:13px;cursor:pointer;transition:all .2s;font-family:'Space Grotesk','Plus Jakarta Sans',sans-serif"
+        onmouseover="this.style.background='rgba(248,113,113,.12)';this.style.color='#f87171';this.style.borderColor='rgba(248,113,113,.3)'"
+        onmouseout="this.style.background='transparent';this.style.color='var(--muted2,#98c4f0)';this.style.borderColor='var(--border,rgba(0,212,170,.25))'">
         🚪 Se déconnecter
       </button>
     </div>
@@ -220,7 +220,7 @@ async function globalSearchHandler(q) {
   q = q.trim().toLowerCase();
 
   box.style.display = 'block';
-  box.innerHTML = `<div style="padding:10px 12px;font-size:12px;color:var(--text-muted,#4b5563)">Recherche...</div>`;
+  box.innerHTML = `<div style="padding:10px 12px;font-size:12px;color:var(--muted2,#98c4f0)">Recherche...</div>`;
 
   clearTimeout(_searchTimer);
   _searchTimer = setTimeout(async () => {
@@ -276,7 +276,7 @@ async function globalSearchHandler(q) {
     } catch(e) {}
 
     if (!results.length) {
-      box.innerHTML = `<div style="padding:14px 12px;font-size:12px;color:var(--text-muted,#4b5563);text-align:center">Aucun résultat pour "${q}"</div>`;
+      box.innerHTML = `<div style="padding:14px 12px;font-size:12px;color:var(--muted2,#98c4f0);text-align:center">Aucun résultat pour "${q}"</div>`;
       return;
     }
 
@@ -288,7 +288,7 @@ async function globalSearchHandler(q) {
     });
 
     box.innerHTML = Object.entries(grouped).map(([cat, items]) => `
-      <div style="padding:6px 12px 2px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted,#4b5563)">${cat}</div>
+      <div style="padding:6px 12px 2px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted2,#98c4f0)">${cat}</div>
       ${items.map(r => `
         <a href="${r.url}" target="_self"
           style="display:flex;align-items:center;gap:9px;padding:8px 12px;text-decoration:none;cursor:pointer;transition:background .15s"
@@ -296,12 +296,12 @@ async function globalSearchHandler(q) {
           onmouseout="this.style.background='transparent'">
           <span style="font-size:15px;flex-shrink:0">${r.icon}</span>
           <div style="overflow:hidden;flex:1">
-            <div style="font-size:12px;font-weight:600;color:var(--text,#e8eaf6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.label}</div>
-            <div style="font-size:11px;color:var(--text-muted,#4b5563);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.sub}</div>
+            <div style="font-size:12px;font-weight:600;color:var(--text,#e0f2fe);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.label}</div>
+            <div style="font-size:11px;color:var(--muted2,#98c4f0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.sub}</div>
           </div>
-          <span style="font-size:11px;color:var(--text-muted,#4b5563)">→</span>
+          <span style="font-size:11px;color:var(--muted2,#98c4f0)">→</span>
         </a>`).join('')}
-    `).join('') + (results.length > 12 ? `<div style="padding:8px 12px;font-size:11px;color:var(--text-muted,#4b5563);border-top:1px solid var(--border,rgba(99,130,255,.1))">+${results.length-12} autres résultats</div>` : '');
+    `).join('') + (results.length > 12 ? `<div style="padding:8px 12px;font-size:11px;color:var(--muted2,#98c4f0);border-top:1px solid var(--border,rgba(99,130,255,.1))">+${results.length-12} autres résultats</div>` : '');
 
   }, 350);
 }

@@ -4,18 +4,19 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CoproGest — Tableau de bord</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
-:root{--bg:#0b0d14;--surface:#111320;--card:#161927;--border:#1e2235;--border-light:#252a3d;--accent:#3b82f6;--accent-glow:rgba(59,130,246,0.15);--green:#10b981;--green-bg:rgba(16,185,129,0.12);--yellow:#f59e0b;--yellow-bg:rgba(245,158,11,0.12);--red:#ef4444;--red-bg:rgba(239,68,68,0.12);--purple:#8b5cf6;--purple-bg:rgba(139,92,246,0.12);--cyan:#06b6d4;--text:#e2e8f0;--text-sub:#94a3b8;--text-muted:#4b5563;--mono:'JetBrains Mono',monospace;}
+:root{--bg:#0055b3;--surface:#00368a;--card:#00368a;--border:rgba(255,255,255,.12);--border-light:rgba(0,212,170,.3);--accent:#00d4aa;--accent-glow:rgba(0,212,170,0.12);--green:#00d4aa;--green-bg:rgba(16,185,129,0.12);--yellow:#f59e0b;--yellow-bg:rgba(245,158,11,0.12);--red:#ef4444;--red-bg:rgba(239,68,68,0.12);--purple:#8b5cf6;--purple-bg:rgba(139,92,246,0.12);--cyan:#00b4d8;--text:#ffffff;--text-sub:#b8d4f8;--text-muted:#98c4f0;--mono:'JetBrains Mono',monospace;}
 *{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:'Outfit','Segoe UI',sans-serif;min-height:100vh;}
+body{background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;min-height:100vh;}
 ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:var(--surface);}::-webkit-scrollbar-thumb{background:var(--border-light);border-radius:4px;}
 #app{display:flex;min-height:100vh;}
 #sidebar{width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;position:fixed;top:0;left:0;z-index:50;overflow-y:auto;}
-#main{margin-left:240px;flex:1;padding:26px 30px;min-height:100vh;background:radial-gradient(ellipse at 80% 0%,rgba(59,130,246,.04) 0%,transparent 50%),var(--bg);}
+#main{margin-left:240px;flex:1;padding:26px 30px;min-height:100vh;background:radial-gradient(ellipse at 80% 0%,rgba(0,180,216,.04) 0%,transparent 50%),var(--bg);}
 .sb-header{padding:18px 16px 14px;border-bottom:1px solid var(--border);}
 .sb-logo{display:flex;align-items:center;gap:9px;}
 .sb-logo-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;font-size:18px;}
@@ -28,7 +29,7 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit','Segoe UI',sans
 .nav-item:hover{background:var(--card);color:var(--text);}.nav-item.active{background:var(--accent-glow);color:var(--accent);font-weight:600;}
 .nav-icon{font-size:16px;width:20px;text-align:center;}
 .sb-footer{padding:12px 16px;border-top:1px solid var(--border);margin-top:auto;}
-.logout-btn{display:flex;align-items:center;gap:8px;width:100%;padding:9px 12px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--text-muted);font-size:13px;cursor:pointer;transition:all .2s;font-family:'Outfit',sans-serif;}
+.logout-btn{display:flex;align-items:center;gap:8px;width:100%;padding:9px 12px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--text-muted);font-size:13px;cursor:pointer;transition:all .2s;font-family:'Plus Jakarta Sans',sans-serif;}
 .logout-btn:hover{background:var(--red-bg);color:var(--red);border-color:rgba(239,68,68,.3);}
 .page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
 .page-title{color:var(--text);font-size:21px;font-weight:700;}.page-breadcrumb{color:var(--text-muted);font-size:12px;margin-top:2px;}
@@ -49,7 +50,7 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit','Segoe UI',sans
 .table-wrap{overflow-x:auto;}table{width:100%;border-collapse:collapse;}thead tr{border-bottom:1px solid var(--border);}
 th{padding:8px 12px;color:var(--text-muted);font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;text-align:left;}
 td{padding:10px 12px;color:var(--text);font-size:13px;border-bottom:1px solid var(--border);}tr:last-child td{border-bottom:none;}tbody tr:hover{background:rgba(255,255,255,.02);}
-.btn{border-radius:8px;font-weight:600;font-size:14px;cursor:pointer;border:1px solid;padding:8px 18px;font-family:'Outfit',sans-serif;transition:opacity .15s;display:inline-block;}
+.btn{border-radius:8px;font-weight:600;font-size:14px;cursor:pointer;border:1px solid;padding:8px 18px;font-family:'Plus Jakarta Sans',sans-serif;transition:opacity .15s;display:inline-block;}
 .btn:hover{opacity:.8;}.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent);}
 .btn-success{background:var(--green-bg);color:var(--green);border-color:rgba(16,185,129,.35);}
 .btn-danger{background:var(--red-bg);color:var(--red);border-color:rgba(239,68,68,.35);}
@@ -81,7 +82,7 @@ const MENUS={
   locataire:[{icon:'⊞',label:'Tableau de bord',url:'dashboard.html',active:true},{icon:'🏠',label:'Mon logement',url:'lots.html'},{icon:'💶',label:'Mes paiements',url:'finances.html'},{icon:'🔧',label:'Incidents',url:'incidents.html'},{icon:'📄',label:'Documents',url:'documents.html'},{icon:'📢',label:'Annonces',url:'annonces.html'}],
 };
 const ROLE_LABELS={syndic:'Syndic',proprietaire:'Copropriétaire',coproprietaire:'Copropriétaire',conseil:'Conseil Syndical',locataire:'Locataire'};
-const AV_COLORS={syndic:'#8b5cf6',proprietaire:'#3b82f6',coproprietaire:'#3b82f6',conseil:'#06b6d4',locataire:'#10b981'};
+const AV_COLORS={syndic:'#8b5cf6',proprietaire:'#00b4d8',coproprietaire:'#00b4d8',conseil:'#06b6d4',locataire:'#10b981'};
 let currentUser=null,userData={};
 
 auth.onAuthStateChanged(async user=>{
@@ -180,7 +181,7 @@ async function buildCopro(name){
   const lotsTableHTML = mesLots.length > 0
     ? `<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-top:12px">
         <table style="width:100%;border-collapse:collapse;font-size:13px">
-          <thead><tr style="background:rgba(59,130,246,.08)">
+          <thead><tr style="background:rgba(0,180,216,.08)">
             <th style="padding:8px 12px;text-align:left;color:var(--text-sub);font-weight:600">Lot</th>
             <th style="padding:8px 12px;text-align:left;color:var(--text-sub);font-weight:600">Type</th>
             <th style="padding:8px 12px;text-align:right;color:var(--text-sub);font-weight:600">Surface</th>
@@ -194,9 +195,9 @@ async function buildCopro(name){
                 <td style="padding:8px 12px;color:var(--text-sub)">${l.type||'Appartement'} · Bât.${l.batiment||'—'}</td>
                 <td style="padding:8px 12px;text-align:right;color:var(--text-sub)">${l.surface||'—'} m²</td>
                 <td style="padding:8px 12px;text-align:right;font-weight:600;color:var(--accent)">${l.tantieme||0}</td>
-                <td style="padding:8px 12px"><span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;${l.locataire?'background:rgba(16,185,129,.12);color:#10b981':'background:rgba(148,163,184,.1);color:#94a3b8'}">${l.locataire?'● Loué':'● Vacant'}</span></td>
+                <td style="padding:8px 12px"><span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;${l.locataire?'background:rgba(16,185,129,.12);color:#10b981':'background:rgba(148,163,184,.1);color:#b8d4f8'}">${l.locataire?'● Loué':'● Vacant'}</span></td>
               </tr>`).join('')}
-            <tr style="border-top:2px solid var(--border);background:rgba(59,130,246,.05)">
+            <tr style="border-top:2px solid var(--border);background:rgba(0,180,216,.05)">
               <td colspan="3" style="padding:8px 12px;font-weight:700;color:var(--text)">TOTAL (${mesLots.length} lot${mesLots.length>1?'s':''})</td>
               <td style="padding:8px 12px;text-align:right;font-weight:800;color:var(--accent)">${tantiemeTotal}</td>
               <td style="padding:8px 12px;font-size:12px;color:var(--text-sub)">${pctTantieme}% de la copropriété</td>
