@@ -456,7 +456,7 @@
       <p>Notre équipe support est disponible du lundi au vendredi, de 9h à 18h.</p>
       <div class="contact-item">
         <div class="contact-item-icon">📧</div>
-        <div class="contact-item-text"><span>Email</span><strong><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="97e4e2e7e7f8e5e3d7f4f8e7e5f8f0f2e4e3b9f1e5">[email&#160;protected]</a></strong></div>
+        <div class="contact-item-text"><span>Email</span><strong><a href="/cdn-cgi/l/email-protection#037a6261676a333a363143646e626a6f2d606c6e"><span class="__cf_email__" data-cfemail="88f1e9eaece1b8b1bdbac8efe5e9e1e4a6ebe7e5">[email&#160;protected]</span></a></strong></div>
       </div>
       <div class="contact-item">
         <div class="contact-item-icon">📞</div>
@@ -480,8 +480,7 @@
         <label>Message</label>
         <textarea class="form-input" placeholder="Votre message..."></textarea>
       </div>
-      <button class="btn-send" onclick="showToast('✅ Message envoyé avec succès !')">Envoyer le message</button>
-    </div>
+      <button class="btn-send" onclick="envoyerContact()">Envoyer le message</button>    </div>
   </div>
 </section>
 
@@ -492,18 +491,74 @@
 <div class="toast" id="toast"></div>
 
 <!-- Firebase pour gérer la déconnexion avant redirection -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
+  // ── Init EmailJS en premier ──
   emailjs.init('ayGABGXa0pHYR5wGt');
-
-  const EMAILJS_SERVICE  = 'service_r4mqekz';
-  const EMAILJS_TPL_OTP  = 'template_qc2c0qo';
+  const EMAILJS_SERVICE = 'service_r4mqekz';
+  const EMAILJS_TPL_OTP = 'template_qc2c0qo';
 
   let emailVerifie = false;
+
+  function toggleFaq(btn) {
+    const item = btn.closest('.faq-item');
+    item.classList.toggle('open');
+  }
+
+  async function envoyerContact() {
+    const nom     = document.querySelector('#contact .contact-form input[type="text"]').value.trim();
+    const email   = document.querySelector('#contact .contact-form input[type="email"]').value.trim();
+    const message = document.querySelector('#contact .contact-form textarea').value.trim();
+
+    if (!nom || !email || !message) {
+      showToast('⚠️ Veuillez remplir tous les champs');
+      return;
+    }
+
+    const btn = document.querySelector('#contact .btn-send');
+    btn.disabled = true;
+    btn.textContent = 'Envoi en cours...';
+
+    try {
+      // 1. Sauvegarder dans Firestore
+      await db.collection('messages_contact').add({
+        nom, email, message,
+        lu: false,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      // 2. Envoyer par email via EmailJS
+      await emailjs.send(EMAILJS_SERVICE, EMAILJS_TPL_OTP, {
+        email_destinataire: 'yabdi0952@gmail.com',
+        to_email:           'yabdi0952@gmail.com',
+        to_name:            'Mohamed',
+        prenom:             'Mohamed',
+        passcode:           '',
+        code:               '',
+        time:               '',
+        footer_contact:     '',
+        message_contact:    `Nouveau message de contact :\n\nDe : ${nom} (${email})\n\n${message}`
+      });
+
+      // 3. Vider le formulaire
+      document.querySelector('#contact .contact-form input[type="text"]').value  = '';
+      document.querySelector('#contact .contact-form input[type="email"]').value = '';
+      document.querySelector('#contact .contact-form textarea').value            = '';
+
+      showToast('✅ Message envoyé ! Nous vous répondrons bientôt.');
+
+    } catch(e) {
+      showToast('❌ Erreur lors de l\'envoi. Réessayez.');
+      console.error(e);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Envoyer le message';
+    }
+  }
 
   // ── Vérification setup au chargement ──
   window.addEventListener('load', async () => {
@@ -551,12 +606,14 @@
 
       await emailjs.send(EMAILJS_SERVICE, EMAILJS_TPL_OTP, {
         email_destinataire: email,
-        to_email: email,
-        to_name: nom.split(' ')[0],
-        prenom: nom.split(' ')[0],
-        passcode: code,
-        code: code,
-        time: new Date(expiry).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})
+        to_email:           email,
+        to_name:            nom.split(' ')[0],
+        prenom:             nom.split(' ')[0],
+        passcode:           code,
+        code:               code,
+        time:               new Date(expiry).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}),
+        message_contact:    '',
+        footer_contact:     'Ce code est valable 10 minutes. Ne le partagez avec personne.\n— CoproGest'
       });
 
       document.getElementById('verif-section').style.display = 'block';

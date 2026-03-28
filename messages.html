@@ -123,12 +123,28 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--navy);color:var
       <h2>💬 Messages</h2>
       <button class="btn-new-conv" onclick="openNewConv()" id="btnNewConv" style="display:none">+ Nouveau</button>
     </div>
-    <div class="conv-search">
+    <!-- Onglets (visibles uniquement pour le syndic) -->
+    <div id="tabBar" style="display:none;border-bottom:1px solid var(--border);flex-shrink:0;">
+      <div style="display:flex;">
+        <button id="tabConv" onclick="switchTab('conv')"
+          style="flex:1;padding:.65rem;border:none;background:transparent;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;border-bottom:2px solid var(--accent);transition:all .2s;">
+          💬 Conversations
+        </button>
+        <button id="tabContact" onclick="switchTab('contact')"
+          style="flex:1;padding:.65rem;border:none;background:transparent;color:var(--muted);font-family:'Plus Jakarta Sans',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;position:relative;">
+          📩 Contact
+          <span id="contactBadge" style="display:none;position:absolute;top:6px;right:10px;background:var(--accent);color:#fff;border-radius:50%;width:17px;height:17px;font-size:.65rem;font-weight:700;align-items:center;justify-content:center;"></span>
+        </button>
+      </div>
+    </div>
+    <div class="conv-search" id="convSearchBox">
       <input type="text" id="convSearch" placeholder="Rechercher..." oninput="filterConversations()">
     </div>
     <div class="conv-list" id="convList">
       <div class="conv-empty">Chargement des conversations...</div>
     </div>
+    <!-- Liste messages contact -->
+    <div id="contactList" style="display:none;flex:1;overflow-y:auto;"></div>
   </div>
 
   <!-- Zone chat -->
@@ -153,7 +169,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--navy);color:var
 </div>
 
 <!-- Modal nouvelle conversation -->
-<div class="modal-overlay" id="newConvModal">
+<div class="modal-overlay" id="newConvModal" onclick="if(event.target===this)closeNewConv()">
   <div class="modal-box">
     <div class="modal-header">
       <h2>💬 Nouvelle conversation</h2>
@@ -175,10 +191,33 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--navy);color:var
   </div>
 </div>
 
+<!-- Modal détail message contact -->
+<div class="modal-overlay" id="contactMsgModal" onclick="if(event.target===this)closeContactModal()">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-header">
+      <h2>📩 Message de contact</h2>
+      <button class="modal-close" onclick="closeContactModal()">✕</button>
+    </div>
+    <div id="contactMsgBody" style="margin-bottom:1.2rem;"></div>
+    <div class="form-group">
+      <label class="form-label">Votre réponse *</label>
+      <textarea class="form-input" id="contactReplyText" placeholder="Écrivez votre réponse..." style="min-height:100px;resize:vertical"></textarea>
+    </div>
+    <div style="display:flex;gap:.75rem;margin-top:.5rem">
+      <button class="btn-submit" onclick="repondreContact()" style="flex:1">📨 Envoyer la réponse</button>
+      <button onclick="supprimerContact()" style="padding:.88rem 1.2rem;border-radius:10px;border:none;background:rgba(248,113,113,.15);color:var(--danger);font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;font-size:.9rem;cursor:pointer;">🗑 Supprimer</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="sidebar.js"></script>
 <script src="firebase-config.js"></script>
 <script>
+emailjs.init('ayGABGXa0pHYR5wGt');
+const EMAILJS_SERVICE  = 'service_r4mqekz';
+const EMAILJS_TPL_OTP  = 'template_qc2c0qo';
 let currentUser = null;
 let currentProfile = null;
 let currentUserName = '';
@@ -205,6 +244,11 @@ auth.onAuthStateChanged(async user => {
     buildSidebar(currentProfile, currentUserName, user.email, 'messages.html');
     // Bouton "Nouveau" visible pour tous
     document.getElementById('btnNewConv').style.display = 'flex';
+    // Onglets visibles uniquement pour le syndic
+    if (currentProfile === 'syndic') {
+      document.getElementById('tabBar').style.display = 'block';
+      loadContactMessages();
+    }
   } catch(e) {}
 
   document.getElementById('ls').style.display = 'none';
@@ -479,6 +523,150 @@ function formatDate(date) {
   if (diff < 86400) return date.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
   if (diff < 604800) return date.toLocaleDateString('fr-FR',{weekday:'short'});
   return date.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});
+}
+
+// ── ONGLETS ──
+let currentTab = 'conv';
+let currentContactMsgId = null;
+let currentContactMsgData = null;
+
+function switchTab(tab) {
+  currentTab = tab;
+  const isConv = tab === 'conv';
+  document.getElementById('tabConv').style.borderBottomColor    = isConv ? 'var(--accent)' : 'transparent';
+  document.getElementById('tabConv').style.color                = isConv ? 'var(--text)' : 'var(--muted)';
+  document.getElementById('tabContact').style.borderBottomColor = !isConv ? 'var(--accent)' : 'transparent';
+  document.getElementById('tabContact').style.color             = !isConv ? 'var(--text)' : 'var(--muted)';
+  document.getElementById('convList').style.display      = isConv ? 'block' : 'none';
+  document.getElementById('convSearchBox').style.display = isConv ? 'block' : 'none';
+  document.getElementById('contactList').style.display   = !isConv ? 'block' : 'none';
+  document.getElementById('btnNewConv').style.display    = isConv ? 'flex' : 'none';
+  if (!isConv) loadContactMessages();
+  // Réinitialiser le panneau chat
+  document.getElementById('chatEmpty').style.display  = 'flex';
+  document.getElementById('chatActive').style.display = 'none';
+}
+
+// ── Charger messages contact ──
+function loadContactMessages() {
+  db.collection('messages_contact')
+    .orderBy('createdAt', 'desc')
+    .onSnapshot(snap => {
+      const msgs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderContactList(msgs);
+      // Badge non lus
+      const nonLus = msgs.filter(m => !m.lu).length;
+      const badge  = document.getElementById('contactBadge');
+      if (nonLus > 0) {
+        badge.textContent = nonLus;
+        badge.style.display = 'inline-flex';
+      } else {
+        badge.style.display = 'none';
+      }
+    });
+}
+
+function renderContactList(msgs) {
+  const list = document.getElementById('contactList');
+  if (!msgs.length) {
+    list.innerHTML = `<div class="conv-empty">Aucun message de contact.</div>`;
+    return;
+  }
+  list.innerHTML = msgs.map(m => {
+    const date = m.createdAt?.toDate ? formatDate(m.createdAt.toDate()) : '';
+    return `<div class="conv-item" onclick="ouvrirContactMsg('${m.id}')" style="${!m.lu ? 'background:rgba(0,212,170,.05)' : ''}">
+      <div class="conv-avatar" style="background:linear-gradient(135deg,#5b7fff,#7c5cfc)">${(m.nom||'?').charAt(0).toUpperCase()}</div>
+      <div class="conv-info">
+        <div class="conv-name" style="${!m.lu ? 'font-weight:700' : ''}">${m.nom||'—'}</div>
+        <div class="conv-last">${(m.message||'').substring(0,50)}...</div>
+      </div>
+      <div class="conv-meta">
+        <div class="conv-time">${date}</div>
+        ${!m.lu ? `<div class="conv-badge">N</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function ouvrirContactMsg(id) {
+  const snap = await db.collection('messages_contact').doc(id).get();
+  if (!snap.exists) return;
+  const m = { id: snap.id, ...snap.data() };
+  currentContactMsgId   = id;
+  currentContactMsgData = m;
+
+  // Marquer comme lu
+  if (!m.lu) await db.collection('messages_contact').doc(id).update({ lu: true });
+
+  const date = m.createdAt?.toDate ? m.createdAt.toDate().toLocaleString('fr-FR') : '—';
+  document.getElementById('contactMsgBody').innerHTML = `
+    <div style="background:var(--card);border-radius:12px;padding:1rem;margin-bottom:.5rem;font-size:.88rem;line-height:1.7">
+      <div style="display:flex;gap:1rem;margin-bottom:.75rem;flex-wrap:wrap">
+        <span style="color:var(--muted);font-size:.78rem">👤 <strong style="color:var(--text)">${m.nom||'—'}</strong></span>
+        <span style="color:var(--muted);font-size:.78rem">📧 <strong style="color:var(--accent4)">${m.email||'—'}</strong></span>
+        <span style="color:var(--muted);font-size:.78rem">🕐 ${date}</span>
+      </div>
+      <div style="color:var(--text2);white-space:pre-wrap">${escapeHtml(m.message||'')}</div>
+    </div>`;
+  document.getElementById('contactReplyText').value = '';
+  document.getElementById('contactMsgModal').classList.add('show');
+}
+
+function closeContactModal() {
+  document.getElementById('contactMsgModal').classList.remove('show');
+  currentContactMsgId   = null;
+  currentContactMsgData = null;
+}
+
+async function repondreContact() {
+  const reponse = document.getElementById('contactReplyText').value.trim();
+  if (!reponse) { showToast('⚠️ Écrivez votre réponse', true); return; }
+  const m = currentContactMsgData;
+  if (!m) return;
+
+  const btn = document.querySelector('#contactMsgModal .btn-submit');
+  btn.disabled = true; btn.textContent = 'Envoi...';
+
+  try {
+    // 1. Envoyer par EmailJS via le template OTP adapté
+    await emailjs.send(EMAILJS_SERVICE, EMAILJS_TPL_OTP, {
+      email_destinataire: m.email,
+      to_email:           m.email,
+      to_name:            m.nom,
+      prenom:             m.nom.split(' ')[0],
+      passcode:           '',
+      code:               '',
+      time:               '',
+      footer_contact:     '',
+      message_contact:    `Le Syndic vous répond :\n\n${reponse}\n\n— CoproGest`
+    });
+
+    // 2. Sauvegarder dans Firestore
+    await db.collection('messages_contact').doc(currentContactMsgId).update({
+      repondu:   true,
+      reponse:   reponse,
+      reponduAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    showToast('✅ Réponse envoyée à ' + m.email);
+    closeContactModal();
+  } catch(e) {
+    showToast('❌ Erreur envoi : ' + e.message, true);
+  } finally {
+    btn.disabled = false; btn.textContent = '📨 Envoyer la réponse';
+  }
+}
+
+async function supprimerContact() {
+  if (!currentContactMsgId) return;
+  if (!confirm('Supprimer ce message définitivement ?')) return;
+  try {
+    await db.collection('messages_contact').doc(currentContactMsgId).delete();
+    showToast('🗑 Message supprimé');
+    closeContactModal();
+  } catch(e) {
+    showToast('❌ Erreur suppression', true);
+  }
 }
 
 let toastTimer;
