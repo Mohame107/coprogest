@@ -40,10 +40,10 @@ Le projet répond à un besoin réel dans le contexte djiboutien où la gestion 
 
 | Membre | Rôle | Email |
 |--------|------|-------|
-| **Mohamed Abdi Ali** | Chef de projet & Développeur principal | mohamedabdiofficiel05@gmail.com |
-| **Mouktar Ahmed Omar** | Développeur Frontend & Tests | — |
-| **Kadidja Ibrahim Moumin** | Développeur Firebase & Sécurité | — |
-| **Mahado Moussa Rayaleh** | Développeur UI/UX & Documentation | — |
+| **Mohamed Abdi Ali** | Developpeur Front-end | mohamedabdiofficiel05@gmail.com |
+| **Mouktar Ahmed Omar** | Developpeur Back-end| mouktarmpabbe2005@gmail.com |
+| **Kadidja Ibrahim Moumin** | Redactrice du projet | katiofficiel34@gmail.com |
+| **Mahado Moussa Rayaleh** | Chef de projet | mahadomoussarayaleh06@gmail.com |
 
 **Encadrant** : Dr. Moubarek  
 **Filière** : Licence 3 Informatique — Génie Logiciel  
