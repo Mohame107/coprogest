@@ -133,7 +133,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--navy);color:var
   <div class="stats">
     <div class="stat-card"><div class="stat-val" id="stTotal">0</div><div class="stat-lbl">Total baux</div></div>
     <div class="stat-card"><div class="stat-val" style="color:var(--accent3)" id="stActif">0</div><div class="stat-lbl">Actifs</div></div>
-    <div class="stat-card"><div class="stat-val" style="color:var(--gold)" id="stLoyer">0 €</div><div class="stat-lbl">Loyers / mois</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--gold)" id="stLoyer">0 DJF</div><div class="stat-lbl">Loyers / mois</div></div>
     <div class="stat-card"><div class="stat-val" style="color:var(--danger)" id="stExpire">0</div><div class="stat-lbl">Expirant bientôt</div></div>
   </div>
 
@@ -187,17 +187,17 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--navy);color:var
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">Loyer (€) *</label>
-        <input type="number" class="form-input" id="b-loyer" placeholder="1200" step="0.01">
+        <label class="form-label">Loyer (DJF) *</label>
+        <input type="number" class="form-input" id="b-loyer" placeholder="45000" step="0.01">
         <span class="ferr" id="e-bloyer">Montant invalide</span>
       </div>
       <div class="form-group">
-        <label class="form-label">Charges (€)</label>
-        <input type="number" class="form-input" id="b-charges" placeholder="150" step="0.01">
+        <label class="form-label">Charges (DJF)</label>
+        <input type="number" class="form-input" id="b-charges" placeholder="5000" step="0.01">
       </div>
     </div>
     <div class="form-group">
-      <label class="form-label">Dépôt de garantie (€)</label>
+      <label class="form-label">Dépôt de garantie (DJF)</label>
       <input type="number" class="form-input" id="b-depot" placeholder="2400" step="0.01">
     </div>
     <button class="btn-submit" id="btnBail" onclick="saveBail()">✅ Créer le bail</button>
@@ -245,7 +245,7 @@ function updateStats() {
   const expire=allBaux.filter(b=>isExpiringSoon(b)).length;
   document.getElementById('stTotal').textContent=allBaux.length;
   document.getElementById('stActif').textContent=actifs.length;
-  document.getElementById('stLoyer').textContent=loyers.toLocaleString('fr-FR')+' €';
+  document.getElementById('stLoyer').textContent=loyers.toLocaleString('fr-FR')+' DJF';
   document.getElementById('stExpire').textContent=expire;
 }
 
@@ -296,12 +296,12 @@ function renderBaux() {
         <div class="bail-row"><span>Propriétaire</span><span>${b.proprio||'—'}</span></div>
         <div class="bail-row"><span>Début</span><span>${b.dateDebut||'—'}</span></div>
         <div class="bail-row"><span>Fin</span><span>${b.dateFin||'Indéterminé'}</span></div>
-        <div class="bail-row"><span>Dépôt garantie</span><span>${(b.depot||0).toLocaleString('fr-FR')} €</span></div>
+        <div class="bail-row"><span>Dépôt garantie</span><span>${(b.depot||0).toLocaleString('fr-FR')} DJF</span></div>
       </div>
       <div class="bail-footer">
         <div>
-          <div class="bail-loyer">${(b.loyer||0).toLocaleString('fr-FR')} €<span style="font-size:.72rem;color:var(--muted);font-weight:400">/mois</span></div>
-          <div style="font-size:.75rem;color:var(--muted)">+ ${(b.charges||0).toLocaleString('fr-FR')} € charges → ${total.toLocaleString('fr-FR')} € total</div>
+          <div class="bail-loyer">${(b.loyer||0).toLocaleString('fr-FR')} DJF<span style="font-size:.72rem;color:var(--muted);font-weight:400">/mois</span></div>
+          <div style="font-size:.75rem;color:var(--muted)">+ ${(b.charges||0).toLocaleString('fr-FR')} DJF charges → ${total.toLocaleString('fr-FR')} DJF total</div>
         </div>
         ${isSyndic?`<div class="bail-actions">
           <button class="btn-sm" onclick="openEdit('${b.id}')">✏️</button>

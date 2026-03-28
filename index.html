@@ -5,24 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CoproGest — Système de gestion de copropriété</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --navy: #0055b3;
-    --card: #0066cc;
-    --card2: #0077e6;
-    --border: rgba(99,130,255,0.15);
-    --accent: #5b7fff;
-    --accent2: #7c5cfc;
-    --accent3: #38d9a9;
-    --text: #e8eaf6;
-    --muted: #d4ecff;
+    --navy:#0044a0;--card:#00368a;--card2:#004aab;--card3:#0055b3;
+    --accent:#00d4aa;--accent2:#00b4d8;--accent3:#00d4aa;
+    --border:rgba(255,255,255,.12);--border-hover:rgba(0,212,170,.5);
+    --text:#ffffff;--text2:#e2f0ff;--muted:#b8d4f8;--muted2:#98c4f0;
+    --danger:#f87171;--gold:#fbbf24;--success:#34d399;
+    --grad-accent:linear-gradient(135deg,#00d4aa 0%,#0ea5e9 100%);
+    --font-head:'Space Grotesk',sans-serif;
+    --font-body:'Plus Jakarta Sans',sans-serif;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html { scroll-behavior: smooth; }
   body {
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     background: var(--navy);
     color: var(--text);
     overflow-x: hidden;
@@ -33,13 +32,13 @@
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
     display: flex; align-items: center; justify-content: space-between;
     padding: 1.1rem 2.5rem;
-    background: rgba(10,15,30,0.88);
+    background: rgba(0,52,140,0.95);
     backdrop-filter: blur(16px);
     border-bottom: 1px solid var(--border);
   }
   .nav-logo {
     display: flex; align-items: center; gap: 0.7rem;
-    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.25rem;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 1.25rem;
     color: var(--text); text-decoration: none;
   }
   .nav-links { display: flex; gap: 2rem; list-style: none; }
@@ -53,7 +52,7 @@
     padding: 0.5rem 1.2rem; border-radius: 8px;
     border: 1px solid var(--border); background: transparent;
     color: var(--text); font-size: 0.88rem; cursor: pointer;
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     text-decoration: none; display: inline-flex; align-items: center;
     transition: border-color .2s, background .2s;
   }
@@ -62,7 +61,7 @@
     padding: 0.5rem 1.4rem; border-radius: 8px;
     background: linear-gradient(135deg, var(--accent), var(--accent2));
     color: #fff; font-size: 0.88rem; cursor: pointer;
-    font-family: 'DM Sans', sans-serif; font-weight: 500;
+    font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 500;
     text-decoration: none; display: inline-flex; align-items: center;
     border: none;
     transition: opacity .2s, transform .15s;
@@ -93,7 +92,7 @@
   }
   .hero h1 {
     position: relative; z-index: 1;
-    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 800;
     font-size: clamp(2.4rem, 5vw, 4rem); line-height: 1.1;
     max-width: 760px;
     animation: fadeUp .7s ease .1s both;
@@ -117,7 +116,7 @@
     padding: 0.85rem 2.2rem; border-radius: 10px;
     background: linear-gradient(135deg, var(--accent), var(--accent2));
     color: #fff; font-size: 1rem; font-weight: 600;
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     text-decoration: none; display: inline-flex; align-items: center;
     border: none;
     transition: transform .15s, opacity .15s;
@@ -128,7 +127,7 @@
     padding: 0.85rem 2.2rem; border-radius: 10px;
     border: 1px solid var(--border); background: transparent;
     color: var(--text); font-size: 1rem;
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     text-decoration: none; display: inline-flex; align-items: center;
     transition: background .2s, border-color .2s;
   }
@@ -140,7 +139,7 @@
   }
   .stat { text-align: center; }
   .stat-num {
-    font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800;
+    font-family: 'Space Grotesk', sans-serif; font-size: 2rem; font-weight: 800;
     background: linear-gradient(90deg, var(--accent), var(--accent3));
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   }
@@ -153,7 +152,7 @@
     font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.8rem;
   }
   .section h2 {
-    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 800;
     font-size: clamp(1.6rem, 3vw, 2.4rem); margin-bottom: 1rem;
   }
   .section-sub { color: var(--muted); font-size: 1rem; max-width: 520px; line-height: 1.7; }
@@ -177,7 +176,7 @@
     font-size: 1.4rem; margin-bottom: 1rem;
     border: 1px solid rgba(91,127,255,0.2);
   }
-  .feature-card h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; margin-bottom: 0.5rem; }
+  .feature-card h3 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1rem; margin-bottom: 0.5rem; }
   .feature-card p { color: var(--muted); font-size: 0.88rem; line-height: 1.6; }
 
   /* ── FAQ ── */
@@ -186,7 +185,7 @@
   .faq-q {
     width: 100%; text-align: left; padding: 1.2rem 1.5rem;
     background: transparent; border: none; color: var(--text);
-    font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 500;
+    font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.95rem; font-weight: 500;
     cursor: pointer; display: flex; justify-content: space-between; align-items: center;
     transition: background .2s;
   }
@@ -202,7 +201,7 @@
   /* ── CONTACT ── */
   .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; margin-top: 3rem; }
   @media(max-width:700px){ .contact-grid { grid-template-columns: 1fr; } }
-  .contact-info h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.2rem; margin-bottom: 0.5rem; }
+  .contact-info h3 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.2rem; margin-bottom: 0.5rem; }
   .contact-info p { color: var(--muted); font-size: 0.9rem; line-height: 1.7; }
   .contact-item { display: flex; align-items: flex-start; gap: 0.8rem; margin-top: 1.2rem; }
   .contact-item-icon {
@@ -218,7 +217,7 @@
   .form-input {
     background: var(--card2); border: 1px solid var(--border);
     border-radius: 8px; padding: 0.75rem 1rem;
-    color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+    color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.9rem;
     transition: border-color .2s;
   }
   .form-input:focus { outline: none; border-color: var(--accent); }
@@ -227,7 +226,7 @@
   .btn-send {
     align-self: flex-start; padding: 0.7rem 1.8rem; border-radius: 8px; border: none;
     background: linear-gradient(135deg, var(--accent), var(--accent2));
-    color: #fff; font-family: 'DM Sans', sans-serif; font-weight: 500;
+    color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 500;
     font-size: 0.9rem; cursor: pointer; transition: opacity .2s;
   }
   .btn-send:hover { opacity: 0.9; }
@@ -398,7 +397,7 @@
         <div style="display:flex;gap:.5rem">
           <input type="email" class="form-input" id="adh-email" placeholder="jean@exemple.fr" style="flex:1">
           <button id="btnEnvoyerCode" onclick="envoyerCode()"
-            style="padding:.6rem 1rem;border-radius:8px;border:none;background:linear-gradient(135deg,#5b7fff,#7c5cfc);color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;white-space:nowrap;display:flex;align-items:center">
+            style="padding:.6rem 1rem;border-radius:8px;border:none;background:linear-gradient(135deg,#00d4aa,#0ea5e9);color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;white-space:nowrap;display:flex;align-items:center">
             📨 Envoyer le code
           </button>
         </div>
@@ -416,7 +415,7 @@
               style="flex:1;letter-spacing:.3em;font-size:1.1rem;text-align:center"
               oninput="if(this.value.length===6) verifierCode()">
             <button onclick="verifierCode()"
-              style="padding:.6rem 1rem;border-radius:8px;border:none;background:linear-gradient(135deg,#38d9a9,#2fb898);color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;white-space:nowrap">
+              style="padding:.6rem 1rem;border-radius:8px;border:none;background:linear-gradient(135deg,#00d4aa,#2fb898);color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;white-space:nowrap">
               ✓ Vérifier
             </button>
           </div>
@@ -424,7 +423,7 @@
       </div>
 
       <!-- Confirmation email vérifié -->
-      <div id="verif-ok" style="display:none;align-items:center;gap:.5rem;background:rgba(56,217,169,.08);border:1px solid rgba(56,217,169,.2);border-radius:8px;padding:.6rem 1rem;margin-bottom:.5rem;font-size:.85rem;color:#38d9a9">
+      <div id="verif-ok" style="display:none;align-items:center;gap:.5rem;background:rgba(56,217,169,.08);border:1px solid rgba(56,217,169,.2);border-radius:8px;padding:.6rem 1rem;margin-bottom:.5rem;font-size:.85rem;color:#00d4aa">
         ✅ Email vérifié avec succès
       </div>
       <div class="form-group">

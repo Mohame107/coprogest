@@ -135,13 +135,13 @@ async function buildSyndic(name){
     </div>
     <div class="grid2">
       <div class="card"><div class="card-header"><span class="card-title">Budget ${new Date().getFullYear()}</span></div><div class="card-body">
-        <div class="prog-bar-wrap"><div class="prog-bar-top"><span>Exécuté</span><span style="font-family:var(--mono)">${totalDep.toLocaleString('fr-FR')} € / 250 000 €</span></div>
+        <div class="prog-bar-wrap"><div class="prog-bar-top"><span>Exécuté</span><span style="font-family:var(--mono)">${totalDep.toLocaleString('fr-FR')} DJF / 250 000 DJF</span></div>
         <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:linear-gradient(90deg,var(--accent),var(--purple))"></div></div></div>
         <a href="finances.html"><button class="btn btn-primary" style="width:100%">Voir finances →</button></a>
       </div></div>
       <div class="card"><div class="card-header"><span class="card-title">Baux actifs</span></div><div class="card-body">
         ${ir('Baux actifs',baux.length+' baux')}
-        ${ir('Loyers / mois','<span style="color:var(--yellow);font-family:var(--mono)">'+loyers.toLocaleString('fr-FR')+' €</span>')}
+        ${ir('Loyers / mois','<span style="color:var(--yellow);font-family:var(--mono)">'+loyers.toLocaleString('fr-FR')+' DJF</span>')}
         <div style="margin-top:12px"><a href="baux.html"><button class="btn btn-success" style="width:100%">Gérer les baux →</button></a></div>
       </div></div>
     </div>`;
@@ -209,10 +209,10 @@ async function buildCopro(name){
 
   document.getElementById('dashContent').innerHTML=`
     <div class="page-header"><div><div class="page-title">Tableau de bord</div><div class="page-breadcrumb">Accueil › Dashboard</div></div></div>
-    ${solde>0?abox('warning','⚠️','Solde à régulariser',solde.toLocaleString('fr-FR')+' € de charges en attente'):abox('info','🏠','Bienvenue '+name,'Votre espace copropriétaire')}
+    ${solde>0?abox('warning','⚠️','Solde à régulariser',solde.toLocaleString('fr-FR')+' DJF de charges en attente'):abox('info','🏠','Bienvenue '+name,'Votre espace copropriétaire')}
     <div class="stats-row">
       ${sc('🏠','Mes lots',mesLots.length,'',`var(--accent)`)}
-      ${sc('💸','Solde charges',solde>0?solde.toFixed(2)+' €':'À jour',solde>0?'à payer':'✓ Aucun impayé',solde>0?'var(--red)':'var(--green)')}
+      ${sc('💸','Solde charges',solde>0?solde.toFixed(2)+' DJF':'À jour',solde>0?'à payer':'✓ Aucun impayé',solde>0?'var(--red)':'var(--green)')}
       ${sc('📊','Tantièmes',tantiemeTotal,pctTantieme+'% copropriété','var(--purple)')}
       ${sc('🔑','Lots loués',loues,loues+'/'+mesLots.length,'var(--green)')}
     </div>
@@ -254,14 +254,14 @@ async function buildConseil(name){
     ${abox('info','⚖️','Mission de contrôle','Vue de contrôle et supervision')}
     <div class="stats-row">
       ${sc('💰','Recouvrement',tauxRec+'%','','var(--green)')}
-      ${sc('📊','Budget exécuté',pct+'%',Math.round(totalDep/1000)+'k/250k €','var(--accent)')}
-      ${sc('⚠️','Dépenses >2000€',grosses.length,'à valider','var(--yellow)')}
+      ${sc('📊','Budget exécuté',pct+'%',Math.round(totalDep/1000)+'k/250k DJF','var(--accent)')}
+      ${sc('⚠️','Dépenses >2000 DJF',grosses.length,'à valider','var(--yellow)')}
       ${sc('🔧','Incidents ouverts',incS.size,'','var(--red)')}
     </div>
     <div class="card"><div class="card-header"><span class="card-title">Dépenses à valider</span></div><div class="card-body">
       ${grosses.length===0?'<div style="text-align:center;padding:1.5rem;color:var(--text-muted)">✅ Aucune dépense importante en attente</div>':
       `<div class="table-wrap"><table><thead><tr><th>Description</th><th>Fournisseur</th><th>Montant</th><th>Date</th><th>Actions</th></tr></thead><tbody>
-      ${grosses.map(d=>`<tr><td><strong>${d.description}</strong></td><td style="color:var(--text-sub)">${d.fournisseur||'—'}</td><td style="color:var(--yellow);font-family:var(--mono);font-weight:700">${(d.montant||0).toLocaleString('fr-FR')} €</td><td style="color:var(--text-muted);font-size:12px">${d.date||'—'}</td><td><div style="display:flex;gap:6px"><button class="btn btn-success btn-sm" onclick="showToast('✅ Validé !')">✓</button><button class="btn btn-danger btn-sm" onclick="showToast('❌ Rejeté !')">✗</button></div></td></tr>`).join('')}
+      ${grosses.map(d=>`<tr><td><strong>${d.description}</strong></td><td style="color:var(--text-sub)">${d.fournisseur||'—'}</td><td style="color:var(--yellow);font-family:var(--mono);font-weight:700">${(d.montant||0).toLocaleString('fr-FR')} DJF</td><td style="color:var(--text-muted);font-size:12px">${d.date||'—'}</td><td><div style="display:flex;gap:6px"><button class="btn btn-success btn-sm" onclick="showToast('✅ Validé !')">✓</button><button class="btn btn-danger btn-sm" onclick="showToast('❌ Rejeté !')">✗</button></div></td></tr>`).join('')}
       </tbody></table></div>`}
     </div></div>`;
 }
@@ -291,7 +291,7 @@ async function buildLocataire(name){
     ${abox('info','🔑','Bienvenue '+name+' !','Espace locataire — Accès simplifié')}
     <div class="stats-row">
       ${sc('🏠','Mon logement',bail?.lot||userData.lot||'—','','var(--accent)')}
-      ${sc('💶','Loyer mensuel',bail?(bail.loyer||0).toLocaleString('fr-FR')+' €':'—',bail?'+'+(bail.charges||0)+' € charges':'','var(--green)')}
+      ${sc('💶','Loyer mensuel',bail?(bail.loyer||0).toLocaleString('fr-FR')+' DJF':'—',bail?'+'+(bail.charges||0)+' DJF charges':'','var(--green)')}
       ${sc('🔧','Mes incidents',incidents.length,resolus+' résolu(s)','var(--yellow)')}
       ${sc('📅','Fin de bail',bail?.dateFin||'—','','var(--purple)')}
     </div>

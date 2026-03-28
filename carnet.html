@@ -149,7 +149,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--navy);color:var
     <div class="stat-card"><div class="stat-val" id="stTotal">0</div><div class="stat-lbl">Total interventions</div></div>
     <div class="stat-card"><div class="stat-val" style="color:var(--danger)" id="stGarantie">0</div><div class="stat-lbl">Garanties actives</div></div>
     <div class="stat-card"><div class="stat-val" style="color:var(--gold)" id="stAnnee">0</div><div class="stat-lbl">Cette année</div></div>
-    <div class="stat-card"><div class="stat-val" style="color:var(--accent3)" id="stCout">0</div><div class="stat-lbl">Coût total (€)</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--accent3)" id="stCout">0</div><div class="stat-lbl">Coût total (DJF)</div></div>
   </div>
 
   <!-- Toolbar -->
@@ -208,7 +208,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--navy);color:var
         <input type="text" class="form-input" id="e-prestataire" placeholder="Nom de l'entreprise">
       </div>
       <div class="form-group">
-        <label class="form-label">Coût (€)</label>
+        <label class="form-label">Coût (DJF)</label>
         <input type="number" class="form-input" id="e-cout" placeholder="0" step="0.01" min="0">
       </div>
     </div>
@@ -368,7 +368,7 @@ function renderEntries() {
         <div class="entry-meta">
           <div class="meta-item"><div class="meta-label">Date</div><div class="meta-value">📅 ${dateStr}</div></div>
           <div class="meta-item"><div class="meta-label">Prestataire</div><div class="meta-value">🏢 ${e.prestataire||'—'}</div></div>
-          <div class="meta-item"><div class="meta-label">Coût</div><div class="meta-value">💰 ${e.cout ? parseFloat(e.cout).toLocaleString('fr-FR')+' €' : '—'}</div></div>
+          <div class="meta-item"><div class="meta-label">Coût</div><div class="meta-value">💰 ${e.cout ? parseFloat(e.cout).toLocaleString('fr-FR')+' DJF' : '—'}</div></div>
           <div class="meta-item"><div class="meta-label">Zone</div><div class="meta-value">📍 ${e.zone||'—'}</div></div>
           ${e.prochaineIntervention ? `<div class="meta-item"><div class="meta-label">Prochaine intervention</div><div class="meta-value">🔄 ${new Date(e.prochaineIntervention).toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'})}</div></div>` : ''}
           ${e.garantieFin ? `<div class="meta-item"><div class="meta-label">Fin de garantie</div><div class="meta-value">🛡️ ${new Date(e.garantieFin).toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'})}</div></div>` : ''}
